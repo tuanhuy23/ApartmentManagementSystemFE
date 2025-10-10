@@ -12,6 +12,7 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
+import { accountApi } from "../../api/accountApi";
 
 const { Text } = Typography;
 
@@ -26,8 +27,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
 
   const handleLogout = () => {
-    // TODO: Implement logout logic
-    console.log("Logout clicked");
+    accountApi.logout();
   };
 
   const userMenuItems: MenuProps["items"] = [

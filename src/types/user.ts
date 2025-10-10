@@ -5,11 +5,21 @@ export interface User {
     createdAt: string;
     updatedAt: string;
 }
-export interface UserLoginRequest {
-    email: string;
-    password: string;
+
+export interface LoginRequestDto {
+    userName: string | null;
+    password: string | null;
 }
+
 export interface UserLoginResponse {
-    token: string;
-    expiresTime: string;
+    accessToken: string;
+    expireTime: string;
+    refreshToken: string;
+}
+
+export interface AccountInfo {
+    id: number;
+    userName: string;
+    email: string;
+    roles?: string[];
 }

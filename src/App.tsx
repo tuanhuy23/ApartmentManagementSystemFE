@@ -1,8 +1,12 @@
 import AppRoutes from "./routes";
 import Layout from "./components/Layout/Layout";
 import { ConfigProvider, theme } from "antd";
+import { useLocation } from "react-router-dom";
 
 function App() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === "/login";
+
   return (
     <ConfigProvider
       theme={{
@@ -13,9 +17,13 @@ function App() {
         },
       }}
     >
-      <Layout>
+      {isLoginPage ? (
         <AppRoutes />
-      </Layout>
+      ) : (
+        <Layout>
+          <AppRoutes />
+        </Layout>
+      )}
     </ConfigProvider>
   );
 }

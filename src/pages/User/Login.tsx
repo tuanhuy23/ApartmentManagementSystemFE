@@ -1,20 +1,50 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Card, Typography, message } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { accountApi } from "../../api/accountApi";
+import { tokenStorage } from "../../utils/storage";
+import type { LoginRequestDto } from "../../types/user";
 
 const { Title } = Typography;
 
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const onFinish = async (values: { email: string; password: string }) => {
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (tokenStorage.isTokenValid()) {
+      navigate("/");
+    }
+  }, [navigate]);
+
+  const onFinish = async (values: { userName: string; password: string }) => {
     setLoading(true);
     try {
-      // TODO: Implement login logic here
-      console.log("Login values:", values);
-      message.success("Login successful!");
-    } catch {
-      message.error("Login failed!");
+      const loginData: LoginRequestDto = {
+        userName: values.userName,
+        password: values.password,
+      };
+      const response = await accountApi.login(loginData);
+  
+        if (response.success) {
+          tokenStorage.setToken(response.data.accessToken, response.data.refreshToken, response.data.expireTime);
+          
+          message.success("Login successful!");
+          navigate("/");
+        } else {
+          message.error(response.message || "Login failed!");
+        }
+    } catch (error: unknown) {
+      let errorMessage = "Login failed!";
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        errorMessage = axiosError.response?.data?.message || "Login failed!";
+      }
+      
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -40,16 +70,15 @@ const Login: React.FC = () => {
           size="large"
         >
           <Form.Item
-            name="email"
-            label="Email"
+            name="userName"
+            label="Username"
             rules={[
-              { required: true, message: "Please enter your email!" },
-              { type: "email", message: "Invalid email format!" }
+              { required: true, message: "Please enter your username!" },
             ]}
           >
             <Input 
               prefix={<UserOutlined />} 
-              placeholder="Enter your email" 
+              placeholder="Enter your username" 
             />
           </Form.Item>
 

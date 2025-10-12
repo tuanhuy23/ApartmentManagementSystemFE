@@ -28,13 +28,12 @@ const Login: React.FC = () => {
       };
       const response = await accountApi.login(loginData);
   
-        if (response.success) {
-          tokenStorage.setToken(response.data.accessToken, response.data.refreshToken, response.data.expireTime);
-          
+        if (response.data != null) {
+          tokenStorage.setToken(response.data.accessToken, response.data.refreshToken);
           message.success("Login successful!");
           navigate("/");
         } else {
-          message.error(response.message || "Login failed!");
+          message.error(response.error.message || "Login failed!");
         }
     } catch (error: unknown) {
       let errorMessage = "Login failed!";

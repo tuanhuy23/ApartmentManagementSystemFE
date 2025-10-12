@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Layout, Button, Dropdown, Badge, Avatar, Space, Drawer, List, Typography, Tag } from "antd";
 import {
   MenuFoldOutlined,
@@ -13,6 +13,8 @@ import {
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { accountApi } from "../../api/accountApi";
+import { tokenStorage } from "../../utils/storage";
+import type { AccountInfo } from "../../types/user";
 
 const { Text } = Typography;
 
@@ -25,8 +27,37 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [user, setUser] = useState<AccountInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const hasFetchedRef = useRef(false);
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (tokenStorage.isTokenValid() && !hasFetchedRef.current && !loading) {
+        hasFetchedRef.current = true;
+        setLoading(true);
+        
+        try {
+          const response = await accountApi.getAccount();
+          if (response.data) {
+            setUser(response.data);
+          } else {
+            setUser(null);
+          }
+        } catch (err) {
+          setUser(null);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   const handleLogout = () => {
+    setUser(null);
+    hasFetchedRef.current = false;
     accountApi.logout();
   };
 
@@ -135,7 +166,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
           <Button type="text" style={{ padding: "4px 8px" }}>
             <Space>
               <Avatar icon={<UserOutlined />} size="small" />
-              <span>Admin User</span>
+              <span>{user?.displayName || user?.userName || "User"}</span>
             </Space>
           </Button>
         </Dropdown>

@@ -8,11 +8,8 @@ export const storage = {
   };
 
 export const tokenStorage = {
-  setToken: (accessToken: string, refreshToken: string, expireTime?: string, ) => {
+  setToken: (accessToken: string, refreshToken: string) => {
     localStorage.setItem("accessToken", accessToken);
-    if (expireTime) {
-      localStorage.setItem("expireTime", expireTime);
-    }
     localStorage.setItem("refreshToken", refreshToken);
   },
   
@@ -22,27 +19,15 @@ export const tokenStorage = {
   
   removeToken: () => {
     localStorage.removeItem("accessToken");
-    localStorage.removeItem("expireTime");
     localStorage.removeItem("refreshToken");
   },
   
   isTokenValid: (): boolean => {
     const accessToken = localStorage.getItem("accessToken");
-    const expireTime = localStorage.getItem("expireTime");
     
     if (!accessToken) return false;
     
-    if (expireTime) {
-      const expiryDate = new Date(expireTime);
-      return expiryDate > new Date();
-    }
-    
     return true;
-  },
-  
-  getTokenExpiry: (): Date | null => {
-    const expireTime = localStorage.getItem("expireTime");
-    return expireTime ? new Date(expireTime) : null;
   },
   
   getRefreshToken: (): string | null => {

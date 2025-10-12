@@ -11,9 +11,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   useEffect(() => {
     const checkAuth = () => {
+      console.log("checkAuth");
       const hasToken = tokenStorage.getToken() !== null;
-      const isValid = tokenStorage.isTokenValid();
-      
+      const isValid = tokenStorage.isTokenValid();    
       setIsAuthenticated(hasToken && isValid);
     };
 

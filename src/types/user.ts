@@ -13,13 +13,23 @@ export interface LoginRequestDto {
 
 export interface UserLoginResponse {
     accessToken: string;
-    expireTime: string;
     refreshToken: string;
 }
 
 export interface AccountInfo {
-    id: number;
+    id: string;
     userName: string;
+    displayName: string;
     email: string;
-    roles?: string[];
+    roles: string;
+    permissions: string[];
+}
+
+export interface RefreshTokenRequest {
+    refreshToken: string;
+}
+
+export interface RefreshTokenResponse {
+    accessToken: string;
+    refreshToken: string;
 }

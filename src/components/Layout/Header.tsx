@@ -14,7 +14,7 @@ import {
 import type { MenuProps } from "antd";
 import { accountApi } from "../../api/accountApi";
 import { tokenStorage } from "../../utils/storage";
-import type { AccountInfo } from "../../types/user";
+import type { AccountInfoResponseDto } from "../../types/user";
 
 const { Text } = Typography;
 
@@ -27,7 +27,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
-  const [user, setUser] = useState<AccountInfo | null>(null);
+  const [user, setUser] = useState<AccountInfoResponseDto | null>(null);
   const [loading, setLoading] = useState(false);
   const hasFetchedRef = useRef(false);
 
@@ -44,7 +44,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
           } else {
             setUser(null);
           }
-        } catch (err) {
+        } catch {
           setUser(null);
         } finally {
           setLoading(false);
@@ -58,7 +58,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
   const handleLogout = () => {
     setUser(null);
     hasFetchedRef.current = false;
-    accountApi.logout();
+    accountApi.logout({ refreshToken: tokenStorage.getRefreshToken() });
   };
 
   const userMenuItems: MenuProps["items"] = [

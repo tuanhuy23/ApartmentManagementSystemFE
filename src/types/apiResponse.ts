@@ -1,18 +1,23 @@
-export interface ApiResponse<T> {
-  data: T;
-  metadata: T;
-  status: number;
-  error: ErrorResponse;
-}
-  
-export interface Pagination {
+export interface MetaData {
   page: number;
-  limit: number;
+  perPage: number;
   total: number;
+  sort: string | null;
 }
 
 export interface ErrorResponse {
-  errorCode: string;
-  message: string;
+  errorCode: string | null;
+  message: string | null;
   statusCode: number;
+}
+
+export interface ApiResponse<T> {
+  status: number;
+  metadata: MetaData;
+  error: ErrorResponse;
+  data: T;
+}
+
+export interface Pagination extends MetaData {
+  limit: number;
 }

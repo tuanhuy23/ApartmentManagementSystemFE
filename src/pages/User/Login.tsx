@@ -28,7 +28,7 @@ const Login: React.FC = () => {
       };
       const response = await accountApi.login(loginData);
   
-        if (response.data != null) {
+        if (response.data != null && response.data.accessToken && response.data.refreshToken) {
           tokenStorage.setToken(response.data.accessToken, response.data.refreshToken);
           message.success("Login successful!");
           navigate("/");

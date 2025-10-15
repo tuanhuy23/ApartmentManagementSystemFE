@@ -9,7 +9,7 @@ const axiosClient = axios.create({
   },
 });
 
-let refreshTokenPromise: Promise<any> | null = null;
+let refreshTokenPromise: Promise<string> | null = null;
 
 axiosClient.interceptors.request.use(
   (config) => {
@@ -17,6 +17,8 @@ axiosClient.interceptors.request.use(
     if (token && tokenStorage.isTokenValid()) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log(axiosClient.request);
+    console.log(axiosClient.defaults.baseURL);
     return config;
   },
   (error) => {

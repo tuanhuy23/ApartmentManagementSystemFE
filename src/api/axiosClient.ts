@@ -17,8 +17,6 @@ axiosClient.interceptors.request.use(
     if (token && tokenStorage.isTokenValid()) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log(axiosClient.request);
-    console.log(axiosClient.defaults.baseURL);
     return config;
   },
   (error) => {

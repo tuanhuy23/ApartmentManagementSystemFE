@@ -12,6 +12,7 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
+import { useNavigate } from "react-router-dom";
 import { accountApi } from "../../api/accountApi";
 import { tokenStorage } from "../../utils/storage";
 import type { AccountInfoResponseDto } from "../../types/user";
@@ -30,6 +31,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
   const [user, setUser] = useState<AccountInfoResponseDto | null>(null);
   const [loading, setLoading] = useState(false);
   const hasFetchedRef = useRef(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -61,11 +63,16 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
     accountApi.logout({ refreshToken: tokenStorage.getRefreshToken() });
   };
 
+  const handleProfileClick = () => {
+    navigate("/profile");
+  };
+
   const userMenuItems: MenuProps["items"] = [
     {
       key: "profile",
       icon: <UserOutlined />,
       label: "Profile",
+      onClick: handleProfileClick,
     },
     {
       type: "divider",

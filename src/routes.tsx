@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home/Home";
 import Login from "./pages/User/Login";
+import UserProfile from "./pages/User/UserProfile";
+import Users from "./pages/Users/Users";
 import AuthGuard from "./components/AuthGuard";
 
 export default function AppRoutes() {
@@ -10,6 +12,16 @@ export default function AppRoutes() {
       <Route path="/" element={
         <AuthGuard>
           <Home />
+        </AuthGuard>
+      } />
+      <Route path="/profile" element={
+        <AuthGuard>
+          <UserProfile />
+        </AuthGuard>
+      } />
+      <Route path="/users" element={
+        <AuthGuard>
+          <Users />
         </AuthGuard>
       } />
     </Routes>

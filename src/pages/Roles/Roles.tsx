@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Table, Typography, Button, Space, message } from "antd";
-import { PlusOutlined, UserOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, SafetyOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { userApi } from "../../api/userApi";
-import type { UserDto } from "../../types/user";
+import { roleApi } from "../../api/roleApi";
+import type { RoleDto } from "../../types/user";
 
 const { Title } = Typography;
 
-const Users: React.FC = () => {
-  const [users, setUsers] = useState<UserDto[]>([]);
+const Roles: React.FC = () => {
+  const [roles, setRoles] = useState<RoleDto[]>([]);
   const [loading, setLoading] = useState(false);
   const hasFetchedRef = useRef(false);
   const navigate = useNavigate();
@@ -18,87 +18,74 @@ const Users: React.FC = () => {
       return;
     }
     hasFetchedRef.current = true;
-    fetchUsers();
+    fetchRoles();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchRoles = async () => {
     try {
       setLoading(true);
-      const response = await userApi.getAll();
+      const response = await roleApi.getAll();
       if (response.data) {
-        setUsers(response.data);
+        setRoles(response.data);
       }
-    } catch  {
-      message.error("Failed to fetch users");
+    } catch {
+      message.error("Failed to fetch roles");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (userId: string) => {
-    navigate(`/users/edit/${userId}`);
+  const handleEdit = (roleId: string) => {
+    navigate(`/roles/edit/${roleId}`);
   };
 
-  const handleDelete = async (userId: string) => {
+  const handleDelete = async (roleId: string) => {
     try {
-      await userApi.delete([userId]);
-      message.success("User deleted successfully!");
-      fetchUsers(); // Refresh the list
+      await roleApi.delete([roleId]);
+      message.success("Role deleted successfully!");
+      fetchRoles(); // Refresh the list
     } catch {
-      message.error("Failed to delete user");
+      message.error("Failed to delete role");
     }
   };
 
   const columns = [
     {
       title: "ID",
-      dataIndex: "userId",
-      key: "userId",
+      dataIndex: "roleId",
+      key: "roleId",
       width: 100,
     },
     {
-      title: "Display Name",
-      dataIndex: "displayName",
-      key: "displayName",
-    },
-    {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
-    },
-    {
-      title: "Username",
-      dataIndex: "userName",
-      key: "userName",
-    },
-    {
-      title: "Role",
+      title: "Role Name",
       dataIndex: "roleName",
       key: "roleName",
     },
     {
-      title: "Apartment",
-      dataIndex: "appartmentName",
-      key: "appartmentName",
-      render: (text: string) => text || "N/A",
-    },
-    {
-      title: "Phone",
-      dataIndex: "phoneNumber",
-      key: "phoneNumber",
-      render: (text: string) => text || "N/A",
+      title: "Permissions",
+      dataIndex: "permissions",
+      key: "permissions",
+      render: (permissions: any[]) => {
+        if (!permissions || permissions.length === 0) {
+          return "No permissions";
+        }
+        const selectedPermissions = permissions.filter(p => p.selected);
+        return selectedPermissions.length > 0 
+          ? `${selectedPermissions.length} permission(s)` 
+          : "No permissions";
+      },
     },
     {
       title: "Actions",
       key: "actions",
       width: 150,
-      render: (_: unknown, record: UserDto) => (
+      render: (_: unknown, record: RoleDto) => (
         <Space size="small">
           <Button 
             type="link" 
             size="small" 
             icon={<EditOutlined />}
-            onClick={() => handleEdit(record.userId!)}
+            onClick={() => handleEdit(record.roleId!)}
           >
             Edit
           </Button>
@@ -107,7 +94,7 @@ const Users: React.FC = () => {
             size="small" 
             danger
             icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.userId!)}
+            onClick={() => handleDelete(record.roleId!)}
           >
             Delete
           </Button>
@@ -125,20 +112,20 @@ const Users: React.FC = () => {
         marginBottom: 24 
       }}>
         <Title level={2}>
-          <UserOutlined /> Users Management
+          <SafetyOutlined /> Roles Management
         </Title>
         <Button 
           type="primary" 
           icon={<PlusOutlined />}
-          onClick={() => navigate("/users/create")}
+          onClick={() => navigate("/roles/create")}
         >
-          Add New User
+          Add New Role
         </Button>
       </div>
       
       <Table
-        rowKey="userId"
-        dataSource={users}
+        rowKey="roleId"
+        dataSource={roles}
         columns={columns}
         loading={loading}
         pagination={{
@@ -146,7 +133,7 @@ const Users: React.FC = () => {
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) => 
-            `${range[0]}-${range[1]} of ${total} users`,
+            `${range[0]}-${range[1]} of ${total} roles`,
         }}
         scroll={{ x: 800 }}
       />
@@ -154,4 +141,4 @@ const Users: React.FC = () => {
   );
 };
 
-export default Users;
+export default Roles;

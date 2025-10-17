@@ -7,6 +7,7 @@ import {
   FileTextOutlined,
   TeamOutlined,
   BuildOutlined,
+  SafetyOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -30,6 +31,11 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       key: "/users",
       icon: <UserOutlined />,
       label: "Users",
+    },
+    {
+      key: "/roles",
+      icon: <SafetyOutlined />,
+      label: "Roles",
     },
     {
       key: "/apartments",

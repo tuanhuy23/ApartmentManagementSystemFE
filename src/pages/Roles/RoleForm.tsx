@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Form, Input, Button, Card, Typography, message, Spin, Checkbox, Divider } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SaveOutlined, DownOutlined, RightOutlined } from "@ant-design/icons";
 import { roleApi } from "../../api/roleApi";
 import type { RoleDto, PermissionInfo } from "../../types/user";
 
@@ -13,16 +13,11 @@ const RoleForm: React.FC = () => {
   const { roleId } = useParams<{ roleId: string }>();
   const [loading, setLoading] = useState(false);
   const [permissions, setPermissions] = useState<PermissionInfo[]>([]);
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   
   const isEditMode = !!roleId;
 
-  useEffect(() => {
-    if (isEditMode) {
-      fetchRole();
-    }
-  }, [roleId]);
-
-  const fetchRole = async () => {
+  const fetchRole = useCallback(async () => {
     if (!roleId) return;
     
     try {
@@ -42,7 +37,13 @@ const RoleForm: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [roleId, form]);
+
+  useEffect(() => {
+    if (isEditMode) {
+      fetchRole();
+    }
+  }, [isEditMode, fetchRole]);
 
   const handlePermissionChange = (permissionName: string, checked: boolean) => {
     setPermissions(prev => 
@@ -52,6 +53,13 @@ const RoleForm: React.FC = () => {
           : p
       )
     );
+  };
+
+  const toggleCardExpansion = (cardType: string) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [cardType]: !prev[cardType]
+    }));
   };
 
   const handleSubmit = async (values: { roleName: string }) => {
@@ -85,7 +93,7 @@ const RoleForm: React.FC = () => {
   };
 
   // Mock permissions data - trong thực tế sẽ load từ API
-  const mockPermissions: PermissionInfo[] = [
+  const mockPermissions = useMemo((): PermissionInfo[] => [
     { name: "user.create", displayName: "Create User", selected: false, type: "user" },
     { name: "user.read", displayName: "View Users", selected: false, type: "user" },
     { name: "user.update", displayName: "Update User", selected: false, type: "user" },
@@ -98,14 +106,21 @@ const RoleForm: React.FC = () => {
     { name: "apartment.read", displayName: "View Apartments", selected: false, type: "apartment" },
     { name: "apartment.update", displayName: "Update Apartment", selected: false, type: "apartment" },
     { name: "apartment.delete", displayName: "Delete Apartment", selected: false, type: "apartment" },
-  ];
+  ], []);
+
+  // Permission category descriptions
+  const permissionDescriptions: Record<string, string> = {
+    user: "Manage user accounts, including creating, viewing, updating, and deleting user profiles",
+    role: "Control role assignments and permissions, allowing you to define what users can access",
+    apartment: "Handle apartment listings, property details, and apartment management operations"
+  };
 
   // Initialize permissions if not in edit mode
   useEffect(() => {
     if (!isEditMode && permissions.length === 0) {
       setPermissions(mockPermissions);
     }
-  }, [isEditMode]);
+  }, [isEditMode, permissions.length, mockPermissions]);
 
   if (loading && isEditMode) {
     return (
@@ -163,22 +178,45 @@ const RoleForm: React.FC = () => {
           
           <div style={{ marginBottom: 24 }}>
             {Object.entries(groupedPermissions).map(([type, typePermissions]) => (
-              <div key={type} style={{ marginBottom: 16 }}>
-                <Title level={4} style={{ textTransform: 'capitalize', marginBottom: 8 }}>
-                  {type} Permissions
-                </Title>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
-                  {typePermissions.map((permission) => (
-                    <Checkbox
-                      key={permission.name}
-                      checked={permission.selected}
-                      onChange={(e) => handlePermissionChange(permission.name!, e.target.checked)}
-                    >
-                      {permission.displayName}
-                    </Checkbox>
-                  ))}
-                </div>
-              </div>
+              <Card 
+                key={type} 
+                style={{ marginBottom: 16 }}
+                title={
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    cursor: 'pointer'
+                  }} 
+                  onClick={() => toggleCardExpansion(type)}
+                  >
+                    <div>
+                      <Title level={4} style={{ textTransform: 'capitalize', margin: 0 }}>
+                        {type} Permissions
+                      </Title>
+                      <Typography.Text type="secondary" style={{ fontSize: '14px' }}>
+                        {permissionDescriptions[type]}
+                      </Typography.Text>
+                    </div>
+                    {expandedCards[type] ? <DownOutlined /> : <RightOutlined />}
+                  </div>
+                }
+                bodyStyle={{ padding: expandedCards[type] ? '16px' : '0' }}
+              >
+                {expandedCards[type] && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
+                    {typePermissions.map((permission) => (
+                      <Checkbox
+                        key={permission.name}
+                        checked={permission.selected}
+                        onChange={(e) => handlePermissionChange(permission.name!, e.target.checked)}
+                      >
+                        {permission.displayName}
+                      </Checkbox>
+                    ))}
+                  </div>
+                )}
+              </Card>
             ))}
           </div>
 

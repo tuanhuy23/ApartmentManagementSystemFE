@@ -3,7 +3,7 @@ import { Table, Typography, Button, Space, message } from "antd";
 import { PlusOutlined, SafetyOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { roleApi } from "../../api/roleApi";
-import type { RoleDto } from "../../types/user";
+import type { RoleDto, PermissionInfo } from "../../types/user";
 
 const { Title } = Typography;
 
@@ -65,7 +65,7 @@ const Roles: React.FC = () => {
       title: "Permissions",
       dataIndex: "permissions",
       key: "permissions",
-      render: (permissions: any[]) => {
+      render: (permissions: PermissionInfo[]) => {
         if (!permissions || permissions.length === 0) {
           return "No permissions";
         }

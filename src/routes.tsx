@@ -6,6 +6,8 @@ import Users from "./pages/Users/Users";
 import UserForm from "./pages/Users/UserForm";
 import Roles from "./pages/Roles/Roles";
 import RoleForm from "./pages/Roles/RoleForm";
+import ApartmentBuildings from "./pages/ApartmentBuildings/ApartmentBuildings";
+import ApartmentBuildingForm from "./pages/ApartmentBuildings/ApartmentBuildingForm";
 import AuthGuard from "./components/AuthGuard";
 
 export default function AppRoutes() {
@@ -50,6 +52,21 @@ export default function AppRoutes() {
       <Route path="/roles/edit/:roleId" element={
         <AuthGuard>
           <RoleForm />
+        </AuthGuard>
+      } />
+      <Route path="/apartment-buildings" element={
+        <AuthGuard>
+          <ApartmentBuildings />
+        </AuthGuard>
+      } />
+      <Route path="/apartment-buildings/create" element={
+        <AuthGuard>
+          <ApartmentBuildingForm />
+        </AuthGuard>
+      } />
+      <Route path="/apartment-buildings/edit/:id" element={
+        <AuthGuard>
+          <ApartmentBuildingForm />
         </AuthGuard>
       } />
     </Routes>

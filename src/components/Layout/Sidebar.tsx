@@ -38,9 +38,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       label: "Roles",
     },
     {
-      key: "/apartments",
+      key: "/apartment-buildings",
       icon: <BuildOutlined />,
-      label: "Apartments",
+      label: "Apartment Buildings",
     },
     {
       key: "/tenants",

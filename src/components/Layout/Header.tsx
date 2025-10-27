@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { Layout, Button, Dropdown, Badge, Avatar, Space, Drawer, List, Typography, Tag } from "antd";
 import {
   MenuFoldOutlined,
@@ -15,7 +15,7 @@ import type { MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";
 import { accountApi } from "../../api/accountApi";
 import { tokenStorage } from "../../utils/storage";
-import type { AccountInfoResponseDto } from "../../types/user";
+import { useAuth } from "../../hooks/useAuth";
 
 const { Text } = Typography;
 
@@ -28,39 +28,21 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
-  const [user, setUser] = useState<AccountInfoResponseDto | null>(null);
-  const [loading, setLoading] = useState(false);
-  const hasFetchedRef = useRef(false);
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      if (tokenStorage.isTokenValid() && !hasFetchedRef.current && !loading) {
-        hasFetchedRef.current = true;
-        setLoading(true);
-        
-        try {
-          const response = await accountApi.getAccount();
-          if (response.data) {
-            setUser(response.data);
-          } else {
-            setUser(null);
-          }
-        } catch {
-          setUser(null);
-        } finally {
-          setLoading(false);
-        }
+  const handleLogout = async () => {
+    const refreshToken = tokenStorage.getRefreshToken();
+    if (refreshToken) {
+      try {
+        await accountApi.logout(refreshToken);
+      } catch (error) {
+        console.error("Logout API error:", error);
       }
-    };
-
-    fetchUserInfo();
-  }, []);
-
-  const handleLogout = () => {
-    setUser(null);
-    hasFetchedRef.current = false;
-    accountApi.logout({ refreshToken: tokenStorage.getRefreshToken() });
+    }
+    tokenStorage.removeToken();
+    logout();
+    window.location.href = "/login";
   };
 
   const handleProfileClick = () => {

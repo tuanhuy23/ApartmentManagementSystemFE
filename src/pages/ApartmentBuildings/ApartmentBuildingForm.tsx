@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Card, Typography, message, Select } from "antd";
+import { Form, Input, Button, Card, Typography, message, Select, Upload } from "antd";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeftOutlined, SaveOutlined, PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SaveOutlined, PlusOutlined, MinusCircleOutlined, UploadOutlined } from "@ant-design/icons";
+import type { UploadFile, UploadProps } from "antd";
 import { apartmentBuildingApi } from "../../api/apartmentBuildingApi";
 import type { CreateApartmentBuildingDto, ApartmentBuildingImageDto } from "../../types/apartmentBuilding";
 
@@ -30,6 +31,18 @@ const ApartmentBuildingForm: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<ApartmentBuildingImageDto[]>([]);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  const handleFileChange: UploadProps["onChange"] = (info) => {
+    const { fileList: newFileList } = info;
+    setFileList(newFileList);
+    
+    if (info.file.status === 'done') {
+      message.success(`${info.file.name} uploaded successfully`);
+      const fileUrl = info.file.response?.url || URL.createObjectURL(info.file.originFileObj as Blob);
+      form.setFieldsValue({ apartmentBuildingImgUrl: fileUrl });
+    }
+  };
 
   const handleSubmit = async (values: FormValues) => {
     try {
@@ -190,10 +203,40 @@ const ApartmentBuildingForm: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            label="Main Image URL"
+            label="Main Image"
             name="apartmentBuildingImgUrl"
           >
-            <Input placeholder="Enter main image URL" />
+            <div>
+              <Input 
+                placeholder="Enter main image URL" 
+                style={{ marginBottom: 8 }}
+              />
+              <Upload
+                fileList={fileList}
+                onChange={handleFileChange}
+                beforeUpload={(file) => {
+                  const isImage = file.type.startsWith('image/');
+                  if (!isImage) {
+                    message.error('You can only upload image files!');
+                    return false;
+                  }
+                  const isLt10M = file.size / 1024 / 1024 < 10;
+                  if (!isLt10M) {
+                    message.error('Image must be smaller than 10MB!');
+                    return false;
+                  }
+                  return true;
+                }}
+                showUploadList={{
+                  showPreviewIcon: false,
+                  showRemoveIcon: true,
+                }}
+                multiple={false}
+                accept="image/*"
+              >
+                <Button icon={<UploadOutlined />}>Choose File</Button>
+              </Upload>
+            </div>
           </Form.Item>
 
           {/* Management Information */}

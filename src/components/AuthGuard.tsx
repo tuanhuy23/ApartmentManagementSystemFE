@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Navigate } from "react-router-dom";
 import { tokenStorage } from "../utils/storage";
 
@@ -7,33 +7,10 @@ interface AuthGuardProps {
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const hasToken = tokenStorage.getToken();
+  const isValid = tokenStorage.isTokenValid();
 
-  useEffect(() => {
-    const checkAuth = () => {
-      console.log("checkAuth");
-      const hasToken = tokenStorage.getToken() !== null;
-      const isValid = tokenStorage.isTokenValid();    
-      setIsAuthenticated(hasToken && isValid);
-    };
-
-    checkAuth();
-  }, []);
-
-  if (isAuthenticated === null) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
-      }}>
-        <div>Loading...</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
+  if (!hasToken || !isValid) {
     return <Navigate to="/login" replace />;
   }
 

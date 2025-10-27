@@ -6,8 +6,6 @@ import type {
   RefreshTokenRequestDto, 
   ChangePasswordRequestDto,
   ChangePasswordResponseDto,
-  UpdatePasswordInFirstTimeLoginRequestDto,
-  UpdatePasswordInFirstTimeLoginResponseDto
 } from "../types/user";
 import type { ApiResponse } from "../types/apiResponse";
 import { tokenStorage } from "../utils/storage";
@@ -22,14 +20,11 @@ export const accountApi = {
   refreshToken: (refreshToken: RefreshTokenRequestDto): Promise<ApiResponse<TokenResponseDto>> => 
     axiosClient.post("/api/Account/refreshToken", { refreshToken }),
   
-  logout: (refreshToken: RefreshTokenRequestDto): Promise<ApiResponse<TokenResponseDto>> => 
+  logout: (refreshToken: string): Promise<ApiResponse<TokenResponseDto>> => 
     axiosClient.post("/api/Account/logout", { refreshToken }),
   
   changePassword: (passwordData: ChangePasswordRequestDto): Promise<ApiResponse<ChangePasswordResponseDto>> => 
     axiosClient.post("/api/Account/changePassword", passwordData),
-  
-  changePasswordInFirstTimeLogin: (passwordData: UpdatePasswordInFirstTimeLoginRequestDto): Promise<ApiResponse<UpdatePasswordInFirstTimeLoginResponseDto>> => 
-    axiosClient.post("/api/Account/changePasswordInFristTimeLogin", passwordData),
   
   logoutClient: () => {
     tokenStorage.removeToken();

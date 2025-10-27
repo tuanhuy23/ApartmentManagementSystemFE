@@ -4,6 +4,7 @@ import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { accountApi } from "../../api/accountApi";
 import { tokenStorage } from "../../utils/storage";
+import { useAuth } from "../../hooks/useAuth";
 import type { LoginRequestDto } from "../../types/user";
 
 const { Title } = Typography;
@@ -11,6 +12,7 @@ const { Title } = Typography;
 const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -30,6 +32,7 @@ const Login: React.FC = () => {
   
         if (response.data != null && response.data.accessToken && response.data.refreshToken) {
           tokenStorage.setToken(response.data.accessToken, response.data.refreshToken);
+          login(); // Update authentication state
           message.success("Login successful!");
           navigate("/");
         } else {

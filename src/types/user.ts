@@ -33,8 +33,9 @@ export interface LoginRequestDto {
 
 export interface TokenResponseDto {
     accessToken: string | null;
-    expireTime: string; // date-time format
+    expireTime: string;
     refreshToken: string | null;
+    isActive: boolean;
 }
 
 export interface AccountInfoResponseDto {
@@ -57,15 +58,6 @@ export interface ChangePasswordRequestDto {
 }
 
 export interface ChangePasswordResponseDto {
-    isSuccess: boolean;
-}
-
-export interface UpdatePasswordInFirstTimeLoginRequestDto {
-    userName: string | null;
-    newPassword: string | null;
-}
-
-export interface UpdatePasswordInFirstTimeLoginResponseDto {
     isSuccess: boolean;
 }
 

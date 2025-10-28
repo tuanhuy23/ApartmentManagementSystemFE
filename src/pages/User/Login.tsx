@@ -32,7 +32,14 @@ const Login: React.FC = () => {
   
         if (response.data != null && response.data.accessToken && response.data.refreshToken) {
           tokenStorage.setToken(response.data.accessToken, response.data.refreshToken);
-          login(); // Update authentication state
+          
+          if (response.data.isActive === false) {
+            message.info("Please change your password to activate your account");
+            navigate("/change-password");
+            return;
+          }
+          
+          login();
           message.success("Login successful!");
           navigate("/");
         } else {

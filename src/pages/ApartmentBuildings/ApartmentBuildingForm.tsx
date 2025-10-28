@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Card, Typography, message, Select, Upload } from "antd";
+import { Form, Input, Button, Card, Typography, message, Select, Upload, Image } from "antd";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeftOutlined, SaveOutlined, PlusOutlined, MinusCircleOutlined, UploadOutlined } from "@ant-design/icons";
-import type { UploadFile, UploadProps } from "antd";
+import { ArrowLeftOutlined, SaveOutlined, PlusOutlined, MinusCircleOutlined, UploadOutlined, LoadingOutlined, DeleteOutlined } from "@ant-design/icons";
+import type { UploadProps } from "antd";
 import { apartmentBuildingApi } from "../../api/apartmentBuildingApi";
+import { fileApi } from "../../api/fileApi";
 import type { CreateApartmentBuildingDto, ApartmentBuildingImageDto } from "../../types/apartmentBuilding";
 
 const { Title } = Typography;
@@ -30,17 +31,61 @@ const ApartmentBuildingForm: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [uploadingMainImage, setUploadingMainImage] = useState(false);
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [images, setImages] = useState<ApartmentBuildingImageDto[]>([]);
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [uploadingImages, setUploadingImages] = useState<boolean[]>([]);
 
-  const handleFileChange: UploadProps["onChange"] = (info) => {
-    const { fileList: newFileList } = info;
-    setFileList(newFileList);
+  const handleMainImageUpload: UploadProps["customRequest"] = async (options) => {
+    const { file, onSuccess, onError } = options;
     
-    if (info.file.status === 'done') {
-      message.success(`${info.file.name} uploaded successfully`);
-      const fileUrl = info.file.response?.url || URL.createObjectURL(info.file.originFileObj as Blob);
+    try {
+      setUploadingMainImage(true);
+      const fileUrl = await fileApi.upload(file as File);
       form.setFieldsValue({ apartmentBuildingImgUrl: fileUrl });
+      setMainImagePreview(fileUrl);
+      message.success('Main image uploaded successfully');
+      onSuccess?.(fileUrl);
+    } catch (error) {
+      message.error('Failed to upload main image');
+      onError?.(error as Error);
+    } finally {
+      setUploadingMainImage(false);
+    }
+  };
+
+  const clearMainImage = () => {
+    form.setFieldsValue({ apartmentBuildingImgUrl: null });
+    setMainImagePreview(null);
+  };
+
+  const handleAdditionalImageUpload = async (index: number, file: File) => {
+    try {
+      setUploadingImages(prev => {
+        const newArray = [...prev];
+        while (newArray.length <= index) {
+          newArray.push(false);
+        }
+        newArray[index] = true;
+        return newArray;
+      });
+      
+      const fileUrl = await fileApi.upload(file);
+      const newImages = [...images];
+      newImages[index] = { ...newImages[index], src: fileUrl };
+      setImages(newImages);
+      message.success('Image uploaded successfully');
+    } catch {
+      message.error('Failed to upload image');
+    } finally {
+      setUploadingImages(prev => {
+        const newArray = [...prev];
+        while (newArray.length <= index) {
+          newArray.push(false);
+        }
+        newArray[index] = false;
+        return newArray;
+      });
     }
   };
 
@@ -65,10 +110,21 @@ const ApartmentBuildingForm: React.FC = () => {
         managementPassword: values.managementPassword,
       };
 
-      await apartmentBuildingApi.createApartmentBuilding(apartmentBuildingData);
-      message.success("Apartment building created successfully!");
-      navigate("/apartment-buildings");
-    } catch  {
+      const response = await apartmentBuildingApi.createApartmentBuilding(apartmentBuildingData);
+      
+      if (response && response.status === 200) {
+        message.success({
+          content: "Apartment building created successfully!",
+          duration: 3,
+        });
+        setTimeout(() => {
+          navigate("/apartment-buildings");
+        }, 1500);
+      } else {
+        message.warning("Apartment building created but unexpected response");
+        navigate("/apartment-buildings");
+      }
+    } catch {
       message.error("Failed to create apartment building");
     } finally {
       setLoading(false);
@@ -87,11 +143,14 @@ const ApartmentBuildingForm: React.FC = () => {
       src: null,
     };
     setImages([...images, newImage]);
+    setUploadingImages([...uploadingImages, false]);
   };
 
   const removeImage = (index: number) => {
     const newImages = images.filter((_, i) => i !== index);
+    const newUploadingImages = uploadingImages.filter((_, i) => i !== index);
     setImages(newImages);
+    setUploadingImages(newUploadingImages);
   };
 
   const updateImage = (index: number, field: keyof ApartmentBuildingImageDto, value: string) => {
@@ -123,7 +182,6 @@ const ApartmentBuildingForm: React.FC = () => {
           onFinish={handleSubmit}
           autoComplete="off"
         >
-          {/* Basic Information */}
           <Title level={4}>Basic Information</Title>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
             <Form.Item
@@ -206,40 +264,69 @@ const ApartmentBuildingForm: React.FC = () => {
             label="Main Image"
             name="apartmentBuildingImgUrl"
           >
-            <div>
-              <Input 
-                placeholder="Enter main image URL" 
-                style={{ marginBottom: 8 }}
-              />
-              <Upload
-                fileList={fileList}
-                onChange={handleFileChange}
-                beforeUpload={(file) => {
-                  const isImage = file.type.startsWith('image/');
-                  if (!isImage) {
-                    message.error('You can only upload image files!');
-                    return false;
-                  }
-                  const isLt10M = file.size / 1024 / 1024 < 10;
-                  if (!isLt10M) {
-                    message.error('Image must be smaller than 10MB!');
-                    return false;
-                  }
-                  return true;
-                }}
-                showUploadList={{
-                  showPreviewIcon: false,
-                  showRemoveIcon: true,
-                }}
-                multiple={false}
-                accept="image/*"
-              >
-                <Button icon={<UploadOutlined />}>Choose File</Button>
-              </Upload>
-            </div>
+            <Input 
+              placeholder="Main image URL (auto-filled after upload)" 
+              readOnly
+            />
           </Form.Item>
 
-          {/* Management Information */}
+          {mainImagePreview && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <Image
+                  src={mainImagePreview}
+                  alt="Main image preview"
+                  width={200}
+                  height={200}
+                  style={{ 
+                    objectFit: 'cover',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '6px'
+                  }}
+                />
+                <Button
+                  type="primary"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={clearMainImage}
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          <Form.Item>
+            <Upload
+              customRequest={handleMainImageUpload}
+              beforeUpload={(file) => {
+                const isImage = file.type.startsWith('image/');
+                if (!isImage) {
+                  message.error('You can only upload image files!');
+                  return false;
+                }
+                const isLt10M = file.size / 1024 / 1024 < 10;
+                if (!isLt10M) {
+                  message.error('Image must be smaller than 10MB!');
+                  return false;
+                }
+                return true;
+              }}
+              showUploadList={false}
+              accept="image/*"
+            >
+              <Button 
+                icon={uploadingMainImage ? <LoadingOutlined /> : <UploadOutlined />}
+                loading={uploadingMainImage}
+              >
+                {uploadingMainImage ? 'Uploading...' : 'Choose File'}
+              </Button>
+            </Upload>
+          </Form.Item>
+
           <Title level={4}>Management Information</Title>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
             <Form.Item
@@ -296,7 +383,6 @@ const ApartmentBuildingForm: React.FC = () => {
             </Form.Item>
           </div>
 
-          {/* Additional Images */}
           <Title level={4}>Additional Images</Title>
           <div style={{ marginBottom: 24 }}>
             <Button 
@@ -310,28 +396,76 @@ const ApartmentBuildingForm: React.FC = () => {
             
             {images.map((image, index) => (
               <Card key={index} size="small" style={{ marginBottom: 16 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 16, alignItems: "center" }}>
-                  <Input
-                    placeholder="Image name"
-                    value={image.name || ""}
-                    onChange={(e) => updateImage(index, "name", e.target.value)}
-                  />
-                  <Input
-                    placeholder="Image URL"
-                    value={image.src || ""}
-                    onChange={(e) => updateImage(index, "src", e.target.value)}
-                  />
-                  <Input
-                    placeholder="Image description"
-                    value={image.description || ""}
-                    onChange={(e) => updateImage(index, "description", e.target.value)}
-                  />
-                  <Button 
-                    type="text" 
-                    danger 
-                    icon={<MinusCircleOutlined />}
-                    onClick={() => removeImage(index)}
-                  />
+                <div style={{ display: "grid", gap: 16, alignItems: "start" }}>
+                  {image.src && (
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                      <Image
+                        src={image.src}
+                        alt={`Additional image ${index + 1} preview`}
+                        width={150}
+                        height={150}
+                        style={{ 
+                          objectFit: 'cover',
+                          border: '1px solid #d9d9d9',
+                          borderRadius: '6px'
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 16, alignItems: "center" }}>
+                    <Input
+                      placeholder="Image name"
+                      value={image.name || ""}
+                      onChange={(e) => updateImage(index, "name", e.target.value)}
+                    />
+                    <Input
+                      placeholder="Image URL (auto-filled after upload)"
+                      value={image.src || ""}
+                      readOnly
+                    />
+                    <Input
+                      placeholder="Image description"
+                      value={image.description || ""}
+                      onChange={(e) => updateImage(index, "description", e.target.value)}
+                    />
+                    <Button 
+                      type="text" 
+                      danger 
+                      icon={<MinusCircleOutlined />}
+                      onClick={() => removeImage(index)}
+                    />
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <Upload
+                      customRequest={async (options) => {
+                        const file = options.file as File;
+                        await handleAdditionalImageUpload(index, file);
+                      }}
+                      beforeUpload={(file) => {
+                        const isImage = file.type.startsWith('image/');
+                        if (!isImage) {
+                          message.error('You can only upload image files!');
+                          return false;
+                        }
+                        const isLt10M = file.size / 1024 / 1024 < 10;
+                        if (!isLt10M) {
+                          message.error('Image must be smaller than 10MB!');
+                          return false;
+                        }
+                        return true;
+                      }}
+                      showUploadList={false}
+                      accept="image/*"
+                    >
+                      <Button 
+                        icon={uploadingImages[index] ? <LoadingOutlined /> : <UploadOutlined />}
+                        loading={uploadingImages[index]}
+                        size="small"
+                      >
+                        {uploadingImages[index] ? 'Uploading...' : 'Upload Image'}
+                      </Button>
+                    </Upload>
+                  </div>
                 </div>
               </Card>
             ))}

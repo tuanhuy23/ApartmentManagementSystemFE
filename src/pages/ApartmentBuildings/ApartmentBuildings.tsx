@@ -39,7 +39,7 @@ const ApartmentBuildings: React.FC = () => {
     navigate(`/apartment-buildings/edit/${id}`);
   };
 
-  const handleDelete = async (_id: string) => {
+  const handleDelete = async () => {
     try {
       // Note: Delete API not provided in the specification, so this is a placeholder
       message.success("Apartment building deleted successfully!");
@@ -149,22 +149,17 @@ const ApartmentBuildings: React.FC = () => {
       render: (_: unknown, record: ApartmentBuildingDto) => (
         <Space size="small">
           <Button 
-            type="link" 
+            type="text" 
             size="small" 
-            icon={<EditOutlined />}
+            icon={<EditOutlined style={{ color: '#000' }} />}
             onClick={() => handleEdit(record.id!)}
-          >
-            Edit
-          </Button>
+          />
           <Button 
-            type="link" 
+            type="text" 
             size="small" 
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id!)}
-          >
-            Delete
-          </Button>
+            icon={<DeleteOutlined style={{ color: '#000' }} />}
+            onClick={handleDelete}
+          />
         </Space>
       ),
     },

@@ -8,6 +8,7 @@ import { useAuth } from "./hooks/useAuth";
 function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
+  const isChangePasswordPage = location.pathname === "/change-password";
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
@@ -33,11 +34,11 @@ function App() {
     );
   }
   
-  if (!isAuthenticated && !isLoginPage) {
+  if (!isAuthenticated && !isLoginPage && !isChangePasswordPage) {
     return <Navigate to="/login" replace />;
   }
   
-  const content = isLoginPage ? <AppRoutes /> : (
+  const content = isLoginPage || isChangePasswordPage ? <AppRoutes /> : (
     <Layout>
       <AppRoutes />
     </Layout>

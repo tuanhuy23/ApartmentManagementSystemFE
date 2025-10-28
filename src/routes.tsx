@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home/Home";
 import Login from "./pages/User/Login";
+import ChangePassword from "./pages/User/ChangePassword";
 import UserProfile from "./pages/User/UserProfile";
 import Users from "./pages/Users/Users";
 import UserForm from "./pages/Users/UserForm";
@@ -14,6 +15,7 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/change-password" element={<ChangePassword />} />
       <Route path="/" element={
         <AuthGuard>
           <Home />

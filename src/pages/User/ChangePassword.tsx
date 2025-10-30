@@ -4,6 +4,7 @@ import { LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { accountApi } from "../../api/accountApi";
 import { tokenStorage } from "../../utils/storage";
+import { getApartmentBuildingIdFromToken } from "../../utils/token";
 import { useAuth } from "../../hooks/useAuth";
 import type { ChangePasswordRequestDto } from "../../types/user";
 
@@ -39,7 +40,8 @@ const ChangePassword: React.FC = () => {
         message.success("Password changed successfully!");
         login();
         setTimeout(() => {
-          navigate("/");
+          const apartmentBuildingId = getApartmentBuildingIdFromToken();
+          navigate(apartmentBuildingId ? `/${apartmentBuildingId}` : "/");
         }, 1500);
       } else {
         message.error("Failed to change password");

@@ -38,3 +38,15 @@ export const tokenStorage = {
     return localStorage.getItem("refreshToken") !== null;
   }
 };
+
+export const apartmentStorage = {
+  setCurrentApartmentId: (apartmentBuildingId: string) => {
+    localStorage.setItem("apartmentBuildingId", apartmentBuildingId);
+  },
+  getCurrentApartmentId: (): string | null => {
+    return localStorage.getItem("apartmentBuildingId");
+  },
+  clearCurrentApartmentId: () => {
+    localStorage.removeItem("apartmentBuildingId");
+  }
+};

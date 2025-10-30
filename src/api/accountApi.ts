@@ -12,19 +12,19 @@ import { tokenStorage } from "../utils/storage";
 
 export const accountApi = {
   getAccount: (): Promise<ApiResponse<AccountInfoResponseDto>> => 
-    axiosClient.get("/api/Account/accountInfo"),
+    axiosClient.get("/Account/accountInfo"),
   
   login: (credentials: LoginRequestDto): Promise<ApiResponse<TokenResponseDto>> => 
-    axiosClient.post("/api/Account/login", credentials),
+    axiosClient.post("/Account/login", credentials),
   
   refreshToken: (refreshToken: RefreshTokenRequestDto): Promise<ApiResponse<TokenResponseDto>> => 
-    axiosClient.post("/api/Account/refreshToken", { refreshToken }),
+    axiosClient.post("/Account/refreshToken", { refreshToken }),
   
   logout: (refreshToken: string): Promise<ApiResponse<TokenResponseDto>> => 
-    axiosClient.post("/api/Account/logout", { refreshToken }),
+    axiosClient.post("/Account/logout", { refreshToken }),
   
   changePassword: (passwordData: ChangePasswordRequestDto): Promise<ApiResponse<ChangePasswordResponseDto>> => 
-    axiosClient.post("/api/Account/changePassword", passwordData),
+    axiosClient.post("/Account/changePassword", passwordData),
   
   logoutClient: () => {
     tokenStorage.removeToken();

@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, SaveOutlined, PlusOutlined, MinusCircleOutlined, Upl
 import type { UploadProps } from "antd";
 import { apartmentBuildingApi } from "../../api/apartmentBuildingApi";
 import { fileApi } from "../../api/fileApi";
+import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import type { CreateApartmentBuildingDto, ApartmentBuildingImageDto } from "../../types/apartmentBuilding";
 
 const { Title } = Typography;
@@ -30,6 +31,7 @@ interface FormValues {
 const ApartmentBuildingForm: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const apartmentBuildingId = useApartmentBuildingId();
   const [loading, setLoading] = useState(false);
   const [uploadingMainImage, setUploadingMainImage] = useState(false);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
@@ -118,7 +120,7 @@ const ApartmentBuildingForm: React.FC = () => {
           duration: 3,
         });
         setTimeout(() => {
-          navigate("/apartment-buildings");
+          navigate(`/${apartmentBuildingId}/apartment-buildings`);
         }, 1500);
       } else {
         message.warning("Apartment building created but unexpected response");

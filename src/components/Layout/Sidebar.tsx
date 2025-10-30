@@ -7,9 +7,9 @@ import {
   FileTextOutlined,
   TeamOutlined,
   BuildOutlined,
-  SafetyOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
+import { getApartmentBuildingIdFromToken } from "../../utils/token";
 
 const { Sider } = Layout;
 
@@ -20,6 +20,17 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  const apartmentBuildingId = pathParts[0] && pathParts[0] !== 'login' && pathParts[0] !== 'change-password' && pathParts[0] !== 'profile'
+    ? pathParts[0]
+    : getApartmentBuildingIdFromToken();
+
+  const getPathWithApartmentId = (path: string) => {
+    if (!apartmentBuildingId) return path;
+    if (path === '/') return `/${apartmentBuildingId}`;
+    return `/${apartmentBuildingId}${path}`;
+  };
 
   const menuItems = [
     {
@@ -28,32 +39,27 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       label: "Dashboard",
     },
     {
-      key: "/users",
+      key: getPathWithApartmentId("/users"),
       icon: <UserOutlined />,
       label: "Users",
     },
     {
-      key: "/roles",
-      icon: <SafetyOutlined />,
-      label: "Roles",
-    },
-    {
-      key: "/apartment-buildings",
+      key: getPathWithApartmentId("/apartment-buildings"),
       icon: <BuildOutlined />,
       label: "Apartment Buildings",
     },
     {
-      key: "/tenants",
+      key: getPathWithApartmentId("/tenants"),
       icon: <TeamOutlined />,
       label: "Tenants",
     },
     {
-      key: "/contracts",
+      key: getPathWithApartmentId("/contracts"),
       icon: <FileTextOutlined />,
       label: "Contracts",
     },
     {
-      key: "/settings",
+      key: getPathWithApartmentId("/settings"),
       icon: <SettingOutlined />,
       label: "Settings",
     },

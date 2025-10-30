@@ -32,11 +32,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const response = await accountApi.getAccount();
         if (response.data) {
           setUser(response.data);
+          setIsAuthenticated(true);
+        } else {
+          tokenStorage.removeToken();
+          setIsAuthenticated(false);
+          window.location.href = "/login";
         }
-        setIsAuthenticated(true);
       } catch {
         tokenStorage.removeToken();
         setIsAuthenticated(false);
+        window.location.href = "/login";
       } finally {
         setIsLoading(false);
       }
@@ -47,6 +52,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = () => {
     setIsAuthenticated(true);
+    (async () => {
+      try {
+        const response = await accountApi.getAccount();
+        if (response.data) {
+          setUser(response.data);
+        }
+      } catch {
+        // ignore
+      }
+    })();
   };
 
   const logout = () => {

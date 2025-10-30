@@ -3,6 +3,7 @@ import { Table, Typography, Button, Space, message } from "antd";
 import { PlusOutlined, UserOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { userApi } from "../../api/userApi";
+import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import type { UserDto } from "../../types/user";
 
 const { Title } = Typography;
@@ -12,6 +13,7 @@ const Users: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const hasFetchedRef = useRef(false);
   const navigate = useNavigate();
+  const apartmentBuildingId = useApartmentBuildingId();
 
   useEffect(() => {
     if (hasFetchedRef.current) {
@@ -36,7 +38,7 @@ const Users: React.FC = () => {
   };
 
   const handleEdit = (userId: string) => {
-    navigate(`/users/edit/${userId}`);
+    navigate(`/${apartmentBuildingId}/users/edit/${userId}`);
   };
 
   const handleDelete = async (userId: string) => {
@@ -130,7 +132,7 @@ const Users: React.FC = () => {
         <Button 
           type="primary" 
           icon={<PlusOutlined />}
-          onClick={() => navigate("/users/create")}
+          onClick={() => navigate(`/${apartmentBuildingId}/users/create`)}
         >
           Add New User
         </Button>

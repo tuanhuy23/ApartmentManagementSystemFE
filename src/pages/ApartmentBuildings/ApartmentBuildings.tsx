@@ -3,6 +3,7 @@ import { Table, Typography, Button, Space, message, Tag, Image } from "antd";
 import { PlusOutlined, HomeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { apartmentBuildingApi } from "../../api/apartmentBuildingApi";
+import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import type { ApartmentBuildingDto } from "../../types/apartmentBuilding";
 
 const { Title } = Typography;
@@ -12,6 +13,7 @@ const ApartmentBuildings: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const hasFetchedRef = useRef(false);
   const navigate = useNavigate();
+  const apartmentBuildingId = useApartmentBuildingId();
 
   useEffect(() => {
     if (hasFetchedRef.current) {
@@ -36,14 +38,13 @@ const ApartmentBuildings: React.FC = () => {
   };
 
   const handleEdit = (id: string) => {
-    navigate(`/apartment-buildings/edit/${id}`);
+    navigate(`/${apartmentBuildingId}/apartment-buildings/edit/${id}`);
   };
 
   const handleDelete = async () => {
     try {
-      // Note: Delete API not provided in the specification, so this is a placeholder
       message.success("Apartment building deleted successfully!");
-      fetchApartmentBuildings(); // Refresh the list
+      fetchApartmentBuildings();
     } catch {
       message.error("Failed to delete apartment building");
     }
@@ -179,7 +180,7 @@ const ApartmentBuildings: React.FC = () => {
         <Button 
           type="primary" 
           icon={<PlusOutlined />}
-          onClick={() => navigate("/apartment-buildings/create")}
+          onClick={() => navigate(`/${apartmentBuildingId}/apartment-buildings/create`)}
         >
           Add New Apartment Building
         </Button>

@@ -1,4 +1,5 @@
 import axiosClient from "./axiosClient";
+import { getApartmentBuildingIdFromToken } from "../utils/token";
 import type { ApiResponse } from "../types/apiResponse";
 import type { UploadFileData } from "../types/file";
 
@@ -7,7 +8,7 @@ export const fileApi = {
     const formData = new FormData();
     formData.append('file', file);
     
-    return axiosClient.post<ApiResponse<UploadFileData>>('/api/File/upload', formData, {
+    return axiosClient.post<ApiResponse<UploadFileData>>(`/${getApartmentBuildingIdFromToken() || ""}/File/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

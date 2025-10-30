@@ -9,6 +9,7 @@ function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
   const isChangePasswordPage = location.pathname === "/change-password";
+  const isErrorPage = location.pathname === "/403" || location.pathname === "/404";
   const { isAuthenticated, isLoading } = useAuth();
   
   if (isLoading) {
@@ -38,7 +39,7 @@ function App() {
     return <Navigate to="/login" replace />;
   }
   
-  const content = isLoginPage || isChangePasswordPage ? <AppRoutes /> : (
+  const content = isLoginPage || isChangePasswordPage || isErrorPage ? <AppRoutes /> : (
     <Layout>
       <AppRoutes />
     </Layout>

@@ -7,7 +7,10 @@ import Users from "./pages/Users/Users";
 import UserForm from "./pages/Users/UserForm";
 import ApartmentBuildings from "./pages/ApartmentBuildings/ApartmentBuildings";
 import ApartmentBuildingForm from "./pages/ApartmentBuildings/ApartmentBuildingForm";
+import Forbidden403 from "./pages/Error/Forbidden403";
+import NotFound404 from "./pages/Error/NotFound404";
 import AuthGuard from "./components/AuthGuard";
+import ApartmentBuildingGuard from "./components/ApartmentBuildingGuard";
 
 export default function AppRoutes() {
   return (
@@ -24,36 +27,58 @@ export default function AppRoutes() {
           <UserProfile />
         </AuthGuard>
       } />
-      <Route path="/users" element={
+      <Route path="/:apartmentBuildingId" element={
         <AuthGuard>
-          <Users />
+          <ApartmentBuildingGuard>
+            <Home />
+          </ApartmentBuildingGuard>
         </AuthGuard>
       } />
-      <Route path="/users/create" element={
+      <Route path="/:apartmentBuildingId/users" element={
         <AuthGuard>
-          <UserForm />
+          <ApartmentBuildingGuard>
+            <Users />
+          </ApartmentBuildingGuard>
         </AuthGuard>
       } />
-      <Route path="/users/edit/:userId" element={
+      <Route path="/:apartmentBuildingId/users/create" element={
         <AuthGuard>
-          <UserForm />
+          <ApartmentBuildingGuard>
+            <UserForm />
+          </ApartmentBuildingGuard>
         </AuthGuard>
       } />
-      <Route path="/apartment-buildings" element={
+      <Route path="/:apartmentBuildingId/users/edit/:userId" element={
         <AuthGuard>
-          <ApartmentBuildings />
+          <ApartmentBuildingGuard>
+            <UserForm />
+          </ApartmentBuildingGuard>
         </AuthGuard>
       } />
-      <Route path="/apartment-buildings/create" element={
+      <Route path="/:apartmentBuildingId/apartment-buildings" element={
         <AuthGuard>
-          <ApartmentBuildingForm />
+          <ApartmentBuildingGuard>
+            <ApartmentBuildings />
+          </ApartmentBuildingGuard>
         </AuthGuard>
       } />
-      <Route path="/apartment-buildings/edit/:id" element={
+      <Route path="/:apartmentBuildingId/apartment-buildings/create" element={
         <AuthGuard>
-          <ApartmentBuildingForm />
+          <ApartmentBuildingGuard>
+            <ApartmentBuildingForm />
+          </ApartmentBuildingGuard>
         </AuthGuard>
       } />
+      <Route path="/:apartmentBuildingId/apartment-buildings/edit/:id" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <ApartmentBuildingForm />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/403" element={<Forbidden403 />} />
+      <Route path="/404" element={<NotFound404 />} />
+      <Route path="*" element={<NotFound404 />} />
     </Routes>
   );
 }

@@ -61,20 +61,3 @@ export interface ChangePasswordResponseDto {
     isSuccess: boolean;
 }
 
-export interface PermissionInfo {
-    name: string | null;
-    displayName: string | null;
-    selected: boolean;
-    type: string | null;
-}
-
-export interface RoleDto {
-    roleId: string | null;
-    roleName: string | null;
-    permissions: PermissionInfo[] | null;
-}
-
-export interface DeleteRoleResponse {
-    roleIdsDeleteSuccess: string[] | null;
-    roleIdsDeleteError: string[] | null;
-}

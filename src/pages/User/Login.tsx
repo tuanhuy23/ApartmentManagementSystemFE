@@ -4,6 +4,7 @@ import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { accountApi } from "../../api/accountApi";
 import { tokenStorage } from "../../utils/storage";
+import { getApartmentBuildingIdFromToken } from "../../utils/token";
 import { useAuth } from "../../hooks/useAuth";
 import type { LoginRequestDto } from "../../types/user";
 
@@ -14,10 +15,10 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (tokenStorage.isTokenValid()) {
-      navigate("/");
+      const apartmentBuildingId = getApartmentBuildingIdFromToken();
+      navigate(apartmentBuildingId ? `/${apartmentBuildingId}` : "/");
     }
   }, [navigate]);
 
@@ -41,7 +42,8 @@ const Login: React.FC = () => {
           
           login();
           message.success("Login successful!");
-          navigate("/");
+          const apartmentBuildingId = getApartmentBuildingIdFromToken();
+          navigate(apartmentBuildingId ? `/${apartmentBuildingId}` : "/");
         } else {
           message.error(response.error.message || "Login failed!");
         }

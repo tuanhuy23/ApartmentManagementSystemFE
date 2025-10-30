@@ -3,8 +3,8 @@ import { Form, Input, Select, Button, Card, Typography, message, Spin } from "an
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons";
 import { userApi } from "../../api/userApi";
-import { roleApi } from "../../api/roleApi";
-import type { CreateOrUpdateUserRequestDto, UserDto, RoleDto } from "../../types/user";
+import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import type { CreateOrUpdateUserRequestDto } from "../../types/user";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -13,29 +13,17 @@ const UserForm: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
+  const apartmentBuildingId = useApartmentBuildingId();
   const [loading, setLoading] = useState(false);
-  const [roles, setRoles] = useState<RoleDto[]>([]);
-  const [user, setUser] = useState<UserDto | null>(null);
+  const roles: any[] = [];
   
   const isEditMode = !!userId;
 
   useEffect(() => {
-    fetchRoles();
     if (isEditMode) {
       fetchUser();
     }
   }, [userId]);
-
-  const fetchRoles = async () => {
-    try {
-      const response = await roleApi.getAll();
-      if (response.data) {
-        setRoles(response.data);
-      }
-    } catch (error) {
-      message.error("Failed to fetch roles");
-    }
-  };
 
   const fetchUser = async () => {
     if (!userId) return;
@@ -46,7 +34,6 @@ const UserForm: React.FC = () => {
       if (response.data) {
         const userData = response.data.find(u => u.userId === userId);
         if (userData) {
-          setUser(userData);
           form.setFieldsValue({
             displayName: userData.displayName,
             email: userData.email,
@@ -87,7 +74,7 @@ const UserForm: React.FC = () => {
         message.success("User created successfully!");
       }
       
-      navigate("/users");
+      navigate(`/${apartmentBuildingId}/users`);
     } catch (error) {
       message.error(isEditMode ? "Failed to update user" : "Failed to create user");
     } finally {
@@ -96,7 +83,7 @@ const UserForm: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate("/users");
+    navigate(`/${apartmentBuildingId}/users`);
   };
 
   if (loading && isEditMode) {

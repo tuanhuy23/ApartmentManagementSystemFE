@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import AppRoutes from "./routes";
 import Layout from "./components/Layout/Layout";
-import { ConfigProvider, theme, Spin } from "antd";
+import { ConfigProvider, theme, Spin, App as AntdApp } from "antd";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
 
@@ -23,14 +23,16 @@ function App() {
           },
         }}
       >
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh' 
-        }}>
-          <Spin size="large" tip="Loading..." />
-        </div>
+        <AntdApp>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100vh' 
+          }}>
+            <Spin size="large" tip="Loading..." />
+          </div>
+        </AntdApp>
       </ConfigProvider>
     );
   }
@@ -55,7 +57,9 @@ function App() {
         },
       }}
     >
-      {content}
+      <AntdApp>
+        {content}
+      </AntdApp>
     </ConfigProvider>
   );
 }

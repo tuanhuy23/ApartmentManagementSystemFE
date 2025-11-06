@@ -7,6 +7,7 @@ import {
   FileTextOutlined,
   TeamOutlined,
   BuildOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
@@ -47,6 +48,11 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       key: getPathWithApartmentId("/apartment-buildings"),
       icon: <BuildOutlined />,
       label: "Apartment Buildings",
+    },
+    {
+      key: getPathWithApartmentId("/fee-configuration"),
+      icon: <DollarOutlined />,
+      label: "Fee Configuration",
     },
     {
       key: getPathWithApartmentId("/tenants"),

@@ -8,6 +8,7 @@ import UserForm from "./pages/Users/UserForm";
 import ApartmentBuildings from "./pages/ApartmentBuildings/ApartmentBuildings";
 import ApartmentBuildingForm from "./pages/ApartmentBuildings/ApartmentBuildingForm";
 import ApartmentDetail from "./pages/Apartment/ApartmentDetail";
+import FeeConfiguration from "./pages/FeeConfiguration/FeeConfiguration";
 import Forbidden403 from "./pages/Error/Forbidden403";
 import NotFound404 from "./pages/Error/NotFound404";
 import AuthGuard from "./components/AuthGuard";
@@ -81,6 +82,13 @@ export default function AppRoutes() {
         <AuthGuard>
           <ApartmentBuildingGuard>
             <ApartmentDetail />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/fee-configuration" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <FeeConfiguration />
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />

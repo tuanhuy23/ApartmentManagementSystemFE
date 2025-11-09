@@ -1,143 +1,161 @@
-import React, { useState } from "react";
-import { Table, Typography, Button, Space, Tag, message, Breadcrumb } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Table, Typography, Button, Space, Tag, App, Breadcrumb } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
-import type { FeeType, CalculationType } from "../../types/fee";
+import { feeConfigurationApi } from "../../api/feeConfigurationApi";
+import type { FeeType, CalculationType, FeeTypeDto } from "../../types/fee";
 import FeeTypeForm from "./FeeTypeForm";
 
 const { Title } = Typography;
 
-// Seeded data
-const mockFeeTypes: FeeType[] = [
-  {
-    id: "1",
-    feeName: "Service Fee",
-    calculationType: "AREA",
-    buildingId: "building-1",
-    buildingName: "BUILDING A",
-    defaultRate: 15000,
-    vatRate: 0.10,
-  },
-  {
-    id: "2",
-    feeName: "Parking Fee",
-    calculationType: "QUANTITY",
-    buildingId: "building-1",
-    buildingName: "BUILDING A",
-    quantityRates: [
-      { id: "q1", itemType: "Motorbike", unitRate: 100000, vatRate: 0.08 },
-      { id: "q2", itemType: "Car-4Seater", unitRate: 1200000, vatRate: 0.10 },
-      { id: "q3", itemType: "Bicycle", unitRate: 30000, vatRate: 0.08 },
-    ],
-  },
-  {
-    id: "3",
-    feeName: "Electricity Fee",
-    calculationType: "TIERED",
-    buildingId: "building-1",
-    buildingName: "BUILDING A",
-    rateConfigs: [
-      {
-        id: "rc1",
-        configName: "EVN Rate 2025",
-        vatRate: 0.08,
-        bvmtFee: 0.00,
-        status: "ACTIVE",
-        tiers: [
-          { id: "t1", tier: 1, from: 0, to: 50, rate: 1800 },
-          { id: "t2", tier: 2, from: 51, to: 100, rate: 2000 },
-          { id: "t3", tier: 3, from: 101, to: 999999, rate: 2500 },
-        ],
-      },
-      {
-        id: "rc2",
-        configName: "EVN Rate 2024",
-        vatRate: 0.10,
-        bvmtFee: 0.00,
-        status: "INACTIVE",
-        tiers: [],
-      },
-    ],
-  },
-  {
-    id: "4",
-    feeName: "Water Fee",
-    calculationType: "TIERED",
-    buildingId: "building-1",
-    buildingName: "BUILDING A",
-    rateConfigs: [
-      {
-        id: "rc3",
-        configName: "Water Rate 2025",
-        vatRate: 0.05,
-        bvmtFee: 0.00,
-        status: "ACTIVE",
-        tiers: [],
-      },
-    ],
-  },
-];
-
 const FeeConfiguration: React.FC = () => {
-  const [feeTypes, setFeeTypes] = useState<FeeType[]>(mockFeeTypes);
+  const { notification } = App.useApp();
+  const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
+  const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFeeType, setEditingFeeType] = useState<FeeType | null>(null);
+  const hasFetchedFeeTypesRef = useRef(false);
   const apartmentBuildingId = useApartmentBuildingId();
+
+  useEffect(() => {
+    if (!hasFetchedFeeTypesRef.current) {
+      hasFetchedFeeTypesRef.current = true;
+      fetchFeeTypes();
+    }
+  }, []);
+
+  const fetchFeeTypes = async () => {
+    try {
+      setLoading(true);
+      const response = await feeConfigurationApi.getAll();
+      if (response.data) {
+        const convertedFeeTypes = response.data.map((dto) => convertDtoToFeeType(dto));
+        setFeeTypes(convertedFeeTypes);
+      }
+    } catch {
+      notification.error({ message: "Failed to fetch fee types" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const convertDtoToFeeType = (dto: FeeTypeDto): FeeType => {
+    const activeConfig = dto.feeRateConfigs?.find((rc) => rc.isActive);
+    return {
+      id: dto.id,
+      feeName: dto.name,
+      calculationType: dto.calculationType as CalculationType,
+      buildingId: dto.apartmentBuildingId,
+      buildingName: "",
+      isActive: dto.isActive,
+      isVATApplicable: dto.isVATApplicable,
+      defaultRate: dto.defaultRate,
+      vatRate: activeConfig?.vatRate || 0,
+      rateConfigs: dto.feeRateConfigs?.map((rc) => ({
+        id: rc.id,
+        configName: rc.name,
+        vatRate: rc.vatRate,
+        bvmtFee: 0,
+        status: rc.isActive ? "ACTIVE" : "INACTIVE",
+        tiers: rc.feeTiers?.map((t) => ({
+          id: t.id,
+          tier: t.tierOrder,
+          from: t.consumptionStart,
+          to: t.consumptionEnd,
+          rate: t.unitRate,
+        })),
+      })),
+      quantityRates: dto.quantityRateConfigs?.map((qr) => ({
+        id: qr.id || "",
+        itemType: qr.itemType,
+        unitRate: qr.unitRate,
+        vatRate: 0,
+      })),
+    };
+  };
 
   const handleCreate = () => {
     setEditingFeeType(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (feeType: FeeType) => {
-    setEditingFeeType(feeType);
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = (feeTypeId: string) => {
-    setFeeTypes(feeTypes.filter((ft) => ft.id !== feeTypeId));
-    message.success("Fee type deleted successfully!");
-  };
-
-  const handleSave = (feeType: FeeType) => {
-    if (editingFeeType) {
-      setFeeTypes(feeTypes.map((ft) => (ft.id === feeType.id ? feeType : ft)));
-      message.success("Fee type updated successfully!");
-    } else {
-      setFeeTypes([...feeTypes, { ...feeType, id: Date.now().toString() }]);
-      message.success("Fee type created successfully!");
-    }
-    setIsModalOpen(false);
-    setEditingFeeType(null);
-  };
-
-  const getRateStatus = (feeType: FeeType): string => {
-    switch (feeType.calculationType) {
-      case "AREA":
-        return `${feeType.defaultRate?.toLocaleString("vi-VN")} VND/m²`;
-      case "QUANTITY":
-        return "(View Details)";
-      case "TIERED":
-        return "(View Active Rate)";
-      default:
-        return "-";
+  const handleEdit = async (feeType: FeeType) => {
+    try {
+      setLoading(true);
+      const response = await feeConfigurationApi.getById(feeType.id);
+      if (response.data) {
+        const convertedFeeType = convertDtoToFeeType(response.data);
+        setEditingFeeType(convertedFeeType);
+        setIsModalOpen(true);
+      }
+    } catch {
+      notification.error({ message: "Failed to fetch fee type details" });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getVATDisplay = (feeType: FeeType): string => {
-    switch (feeType.calculationType) {
-      case "AREA":
-        return `${(feeType.vatRate || 0) * 100}%`;
-      case "QUANTITY":
-        return "(Varies)";
-      case "TIERED":
-        const activeConfig = feeType.rateConfigs?.find((rc) => rc.status === "ACTIVE");
-        return activeConfig ? `${activeConfig.vatRate * 100}%` : "-";
-      default:
-        return "-";
+  const handleDelete = () => {
+    notification.error({ message: "Delete functionality not available in API" });
+  };
+
+  const handleSave = async (feeType: FeeType) => {
+    try {
+      setLoading(true);
+      const dto = convertFeeTypeToDto(feeType);
+      
+      if (editingFeeType) {
+        await feeConfigurationApi.update(dto);
+        notification.success({ message: "Fee type updated successfully!" });
+      } else {
+        await feeConfigurationApi.create(dto);
+        notification.success({ message: "Fee type created successfully!" });
+      }
+      
+      setIsModalOpen(false);
+      setEditingFeeType(null);
+      hasFetchedFeeTypesRef.current = false;
+      fetchFeeTypes();
+    } catch {
+      notification.error({ message: "Failed to save fee type" });
+    } finally {
+      setLoading(false);
     }
   };
+
+  const convertFeeTypeToDto = (feeType: FeeType) => {
+    return {
+      id: feeType.id && feeType.id.trim() !== "" ? feeType.id : null,
+      name: feeType.feeName,
+      calculationType: feeType.calculationType,
+      apartmentBuildingId: apartmentBuildingId || "",
+      isVATApplicable: feeType.isVATApplicable ?? true,
+      defaultRate: feeType.defaultRate || 0,
+      defaultVATRate: feeType.vatRate || 0,
+      isActive: feeType.isActive ?? true,
+      feeRateConfigs: feeType.rateConfigs?.map((rc) => ({
+        id: rc.id && rc.id.trim() !== "" ? rc.id : null,
+        name: rc.configName,
+        vatRate: rc.vatRate,
+        isActive: rc.status === "ACTIVE",
+        feeTiers: rc.tiers?.map((t) => ({
+          id: t.id && t.id.trim() !== "" ? t.id : null,
+          tierOrder: t.tier,
+          consumptionStart: t.from,
+          consumptionEnd: t.to,
+          unitRate: t.rate,
+          unitName: "unit",
+        })) || [],
+      })) || [],
+      quantityRateConfigs: feeType.quantityRates?.map((qr) => ({
+        id: qr.id && qr.id.trim() !== "" ? qr.id : null,
+        isActive: true,
+        itemType: qr.itemType,
+        unitRate: qr.unitRate,
+      })) || [],
+    };
+  };
+
 
   const columns = [
     {
@@ -156,38 +174,35 @@ const FeeConfiguration: React.FC = () => {
       ),
     },
     {
-      title: "Rate/Status",
-      key: "rateStatus",
-      render: (_: unknown, record: FeeType) => getRateStatus(record),
-    },
-    {
-      title: "VAT",
-      key: "vat",
-      render: (_: unknown, record: FeeType) => getVATDisplay(record),
+      title: "Active",
+      key: "active",
+      width: 100,
+      render: (_: unknown, record: FeeType) => (
+        <span style={{ color: record.isActive ? "#000" : "#d9d9d9" }}>
+          {record.isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+        </span>
+      ),
     },
     {
       title: "Actions",
       key: "actions",
-      width: 150,
+      width: 100,
       render: (_: unknown, record: FeeType) => (
         <Space size="small">
           <Button
-            type="link"
+            type="text"
             size="small"
-            icon={<EditOutlined />}
+            icon={<EditOutlined style={{ color: "#000" }} />}
             onClick={() => handleEdit(record)}
-          >
-            Edit
-          </Button>
+            style={{ color: "#000" }}
+          />
           <Button
-            type="link"
+            type="text"
             size="small"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
-          >
-            Del
-          </Button>
+            icon={<DeleteOutlined style={{ color: "#000" }} />}
+            onClick={handleDelete}
+            style={{ color: "#000" }}
+          />
         </Space>
       ),
     },
@@ -234,6 +249,7 @@ const FeeConfiguration: React.FC = () => {
         rowKey="id"
         dataSource={feeTypes}
         columns={columns}
+        loading={loading}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -249,7 +265,7 @@ const FeeConfiguration: React.FC = () => {
         }}
         onSave={handleSave}
         feeType={editingFeeType}
-        buildingName={feeTypes[0]?.buildingName || "BUILDING A"}
+        buildingName=""
       />
     </div>
   );

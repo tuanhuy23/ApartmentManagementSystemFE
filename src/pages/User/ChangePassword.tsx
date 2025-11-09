@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Form, Input, Button, Card, Typography, message } from "antd";
+import { Form, Input, Button, Card, Typography, App } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { accountApi } from "../../api/accountApi";
@@ -11,6 +11,7 @@ import type { ChangePasswordRequestDto } from "../../types/user";
 const { Title } = Typography;
 
 const ChangePassword: React.FC = () => {
+  const { notification } = App.useApp();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -37,17 +38,17 @@ const ChangePassword: React.FC = () => {
       const response = await accountApi.changePassword(changePasswordData);
 
       if (response && response.status === 200 && response.data?.isSuccess) {
-        message.success("Password changed successfully!");
+        notification.success({ message: "Password changed successfully!" });
         login();
         setTimeout(() => {
           const apartmentBuildingId = getApartmentBuildingIdFromToken();
           navigate(apartmentBuildingId ? `/${apartmentBuildingId}` : "/");
         }, 1500);
       } else {
-        message.error("Failed to change password");
+        notification.error({ message: "Failed to change password" });
       }
     } catch {
-      message.error("Failed to change password");
+      notification.error({ message: "Failed to change password" });
     } finally {
       setLoading(false);
     }

@@ -1,29 +1,29 @@
 export interface UserDto {
-    userId: string | null;
-    displayName: string | null;
-    email: string | null;
-    roleName: string | null;
-    roleId: string | null;
-    userName: string | null;
-    appartmentId: string | null;
-    appartmentName: string | null;
-    phoneNumber: string | null;
+    userId: string;
+    displayName: string;
+    email: string;
+    roleName: string;
+    roleId: string;
+    userName: string;
+    appartmentBuildingId: string;
+    appartmentBuildingName: string;
+    phoneNumber: string;
 }
 
 export interface CreateOrUpdateUserRequestDto {
-    userId: string | null;
-    displayName: string | null;
-    email: string | null;
-    roleId: string | null;
-    possition: string | null;
-    userName: string | null;
-    phoneNumber: string | null;
-    appartmentBuildingId: string | null;
+    userId: string;
+    displayName: string;
+    email: string;
+    roleId: string;
+    userName: string;
+    phoneNumber: string;
+    appartmentBuildingId: string;
+    password: string;
 }
 
 export interface DeleteUserResponseDto {
-    userIdsDeleteSuccess: string[] | null;
-    userIdsDeleteError: string[] | null;
+    userIdsDeleteSuccess: string[];
+    userIdsDeleteError: string[];
 }
 
 export interface LoginRequestDto {
@@ -39,12 +39,13 @@ export interface TokenResponseDto {
 }
 
 export interface AccountInfoResponseDto {
-    id: string | null;
-    email: string | null;
-    displayName: string | null;
-    userName: string | null;
-    role: string | null;
-    permissions: string[] | null;
+    id: string;
+    email: string;
+    displayName: string;
+    userName: string;
+    role: string;
+    apartmentBuildingId: string;
+    permissions: string[];
 }
 
 export interface RefreshTokenRequestDto {

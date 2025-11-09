@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Modal, Table, Button, InputNumber, Space } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { FeeRateConfig, FeeTier } from "../../types/fee";
@@ -10,23 +10,33 @@ interface TierDetailsProps {
   rateConfig: FeeRateConfig;
 }
 
+interface TierWithTempId extends FeeTier {
+  tempId?: string;
+}
+
 const TierDetails: React.FC<TierDetailsProps> = ({
   open,
   onCancel,
   onSave,
   rateConfig,
 }) => {
-  const [tiers, setTiers] = useState<FeeTier[]>(rateConfig.tiers || []);
+  const [tiers, setTiers] = useState<TierWithTempId[]>([]);
+  const tempIdCounter = useRef(0);
 
   useEffect(() => {
     if (open) {
-      setTiers(rateConfig.tiers || []);
+      const initialTiers = (rateConfig.tiers || []).map((tier) => ({
+        ...tier,
+        tempId: tier.id || `temp_${tempIdCounter.current++}`,
+      }));
+      setTiers(initialTiers);
     }
   }, [open, rateConfig]);
 
   const handleAddTier = () => {
-    const newTier: FeeTier = {
-      id: Date.now().toString(),
+    const newTier: TierWithTempId = {
+      id: "",
+      tempId: `temp_${tempIdCounter.current++}`,
       tier: tiers.length + 1,
       from: tiers.length > 0 ? tiers[tiers.length - 1].to + 1 : 0,
       to: 999999,
@@ -35,9 +45,8 @@ const TierDetails: React.FC<TierDetailsProps> = ({
     setTiers([...tiers, newTier]);
   };
 
-  const handleDelete = (id: string) => {
-    const updatedTiers = tiers.filter((t) => t.id !== id);
-    // Re-number tiers
+  const handleDelete = (tempId: string) => {
+    const updatedTiers = tiers.filter((t) => t.tempId !== tempId);
     const renumberedTiers = updatedTiers.map((t, index) => ({
       ...t,
       tier: index + 1,
@@ -45,22 +54,20 @@ const TierDetails: React.FC<TierDetailsProps> = ({
     setTiers(renumberedTiers);
   };
 
-  const handleFieldChange = (id: string, field: keyof FeeTier, value: any) => {
+  const handleFieldChange = (tempId: string, field: keyof FeeTier, value: any) => {
+    const currentIndex = tiers.findIndex((t) => t.tempId === tempId);
+    if (currentIndex === -1) return;
+
     setTiers(
-      tiers.map((tier) => {
-        if (tier.id === id) {
-          const updated = { ...tier, [field]: value };
-          // Auto-adjust next tier's "from" if this tier's "to" changes
-          if (field === "to") {
-            const currentIndex = tiers.findIndex((t) => t.id === id);
-            if (currentIndex < tiers.length - 1) {
-              const nextTier = tiers[currentIndex + 1];
-              if (nextTier.from <= value) {
-                nextTier.from = value + 1;
-              }
-            }
-          }
-          return updated;
+      tiers.map((tier, index) => {
+        if (tier.tempId === tempId) {
+          return { ...tier, [field]: value };
+        }
+        if (field === "from" && index === currentIndex - 1) {
+          return { ...tier, to: value - 1 };
+        }
+        if (field === "to" && index === currentIndex + 1) {
+          return { ...tier, from: value + 1 };
         }
         return tier;
       })
@@ -68,7 +75,8 @@ const TierDetails: React.FC<TierDetailsProps> = ({
   };
 
   const handleSave = () => {
-    onSave(tiers);
+    const tiersToSave = tiers.map(({ tempId, ...tier }) => tier);
+    onSave(tiersToSave);
   };
 
   const columns = [
@@ -81,10 +89,10 @@ const TierDetails: React.FC<TierDetailsProps> = ({
     {
       title: "From (Start)",
       key: "from",
-      render: (_: unknown, record: FeeTier) => (
+      render: (_: unknown, record: TierWithTempId) => (
         <InputNumber
           value={record.from}
-          onChange={(value) => handleFieldChange(record.id, "from", value || 0)}
+          onChange={(value) => handleFieldChange(record.tempId!, "from", value || 0)}
           style={{ width: "100%" }}
           min={0}
         />
@@ -93,10 +101,10 @@ const TierDetails: React.FC<TierDetailsProps> = ({
     {
       title: "To (End)",
       key: "to",
-      render: (_: unknown, record: FeeTier) => (
+      render: (_: unknown, record: TierWithTempId) => (
         <InputNumber
           value={record.to}
-          onChange={(value) => handleFieldChange(record.id, "to", value || 0)}
+          onChange={(value) => handleFieldChange(record.tempId!, "to", value || 0)}
           style={{ width: "100%" }}
           min={record.from}
         />
@@ -105,14 +113,14 @@ const TierDetails: React.FC<TierDetailsProps> = ({
     {
       title: "Rate (VND/kWh)",
       key: "rate",
-      render: (_: unknown, record: FeeTier) => (
+      render: (_: unknown, record: TierWithTempId) => (
         <InputNumber
           value={record.rate}
-          onChange={(value) => handleFieldChange(record.id, "rate", value || 0)}
+          onChange={(value) => handleFieldChange(record.tempId!, "rate", value || 0)}
           style={{ width: "100%" }}
           min={0}
           formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-          parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
+          parser={(value) => parseFloat(value!.replace(/\$\s?|(,*)/g, "")) || 0}
         />
       ),
     },
@@ -120,15 +128,14 @@ const TierDetails: React.FC<TierDetailsProps> = ({
       title: "Actions",
       key: "actions",
       width: 100,
-      render: (_: unknown, record: FeeTier) => (
+      render: (_: unknown, record: TierWithTempId) => (
         <Button
-          type="link"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(record.id)}
-        >
-          Delete
-        </Button>
+          type="text"
+          size="small"
+          icon={<DeleteOutlined style={{ color: "#000" }} />}
+          onClick={() => handleDelete(record.tempId!)}
+          style={{ color: "#000" }}
+        />
       ),
     },
   ];
@@ -160,7 +167,7 @@ const TierDetails: React.FC<TierDetailsProps> = ({
       </div>
 
       <Table
-        rowKey="id"
+        rowKey="tempId"
         dataSource={tiers}
         columns={columns}
         pagination={false}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, Space, message, Tag, Image } from "antd";
+import { Table, Typography, Button, Space, Tag, App } from "antd";
 import { PlusOutlined, HomeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { apartmentBuildingApi } from "../../api/apartmentBuildingApi";
@@ -9,6 +9,7 @@ import type { ApartmentBuildingDto } from "../../types/apartmentBuilding";
 const { Title } = Typography;
 
 const ApartmentBuildings: React.FC = () => {
+  const { notification } = App.useApp();
   const [apartmentBuildings, setApartmentBuildings] = useState<ApartmentBuildingDto[]>([]);
   const [loading, setLoading] = useState(false);
   const hasFetchedRef = useRef(false);
@@ -31,7 +32,7 @@ const ApartmentBuildings: React.FC = () => {
         setApartmentBuildings(response.data);
       }
     } catch {
-      message.error("Failed to fetch apartment buildings");
+      notification.error({ message: "Failed to fetch apartment buildings" });
     } finally {
       setLoading(false);
     }
@@ -43,10 +44,10 @@ const ApartmentBuildings: React.FC = () => {
 
   const handleDelete = async () => {
     try {
-      message.success("Apartment building deleted successfully!");
+      notification.success({ message: "Apartment building deleted successfully!" });
       fetchApartmentBuildings();
     } catch {
-      message.error("Failed to delete apartment building");
+      notification.error({ message: "Failed to delete apartment building" });
     }
   };
 
@@ -64,12 +65,6 @@ const ApartmentBuildings: React.FC = () => {
   };
 
   const columns = [
-    {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 100,
-    },
     {
       title: "Name",
       dataIndex: "name",
@@ -106,41 +101,6 @@ const ApartmentBuildings: React.FC = () => {
         <Tag color={getStatusColor(status)}>
           {status || "Unknown"}
         </Tag>
-      ),
-    },
-    {
-      title: "Currency",
-      dataIndex: "currencyUnit",
-      key: "currencyUnit",
-      render: (text: string) => text || "N/A",
-    },
-    {
-      title: "Image",
-      dataIndex: "apartmentBuildingImgUrl",
-      key: "apartmentBuildingImgUrl",
-      render: (url: string) => (
-        url ? (
-          <Image
-            width={50}
-            height={50}
-            src={url}
-            style={{ objectFit: 'cover', borderRadius: 4 }}
-            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
-          />
-        ) : (
-          <div style={{ 
-            width: 50, 
-            height: 50, 
-            backgroundColor: '#f0f0f0', 
-            borderRadius: 4,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#999'
-          }}>
-            No Image
-          </div>
-        )
       ),
     },
     {

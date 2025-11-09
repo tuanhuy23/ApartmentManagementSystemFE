@@ -3,11 +3,10 @@ import { Layout, Menu } from "antd";
 import {
   HomeOutlined,
   UserOutlined,
-  SettingOutlined,
-  FileTextOutlined,
-  TeamOutlined,
   BuildOutlined,
   DollarOutlined,
+  ApartmentOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
@@ -50,24 +49,19 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       label: "Apartment Buildings",
     },
     {
+      key: getPathWithApartmentId("/apartments"),
+      icon: <ApartmentOutlined />,
+      label: "Apartments",
+    },
+    {
       key: getPathWithApartmentId("/fee-configuration"),
       icon: <DollarOutlined />,
       label: "Fee Configuration",
     },
     {
-      key: getPathWithApartmentId("/tenants"),
-      icon: <TeamOutlined />,
-      label: "Tenants",
-    },
-    {
-      key: getPathWithApartmentId("/contracts"),
-      icon: <FileTextOutlined />,
-      label: "Contracts",
-    },
-    {
-      key: getPathWithApartmentId("/settings"),
-      icon: <SettingOutlined />,
-      label: "Settings",
+      key: getPathWithApartmentId("/billing-cycle"),
+      icon: <CalendarOutlined />,
+      label: "Billing Cycle",
     },
   ];
 

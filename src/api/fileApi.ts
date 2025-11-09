@@ -8,7 +8,7 @@ export const fileApi = {
     const formData = new FormData();
     formData.append('file', file);
     
-    return axiosClient.post<ApiResponse<UploadFileData>>(`/${getApartmentBuildingIdFromToken() || ""}/File/upload`, formData, {
+    return axiosClient.post<ApiResponse<UploadFileData>>(`/${getApartmentBuildingIdFromToken() || ""}/file/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

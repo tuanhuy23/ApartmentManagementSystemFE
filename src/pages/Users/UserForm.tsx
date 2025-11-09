@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, Select, Button, Card, Typography, message, Spin } from "antd";
+import { Form, Input, Select, Button, Card, Typography, Spin, App } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons";
 import { userApi } from "../../api/userApi";
@@ -10,6 +10,7 @@ const { Title } = Typography;
 const { Option } = Select;
 
 const UserForm: React.FC = () => {
+  const { notification } = App.useApp();
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
@@ -45,7 +46,7 @@ const UserForm: React.FC = () => {
         }
       }
     } catch (error) {
-      message.error("Failed to fetch user data");
+      notification.error({ message: "Failed to fetch user data" });
     } finally {
       setLoading(false);
     }
@@ -68,15 +69,15 @@ const UserForm: React.FC = () => {
 
       if (isEditMode) {
         await userApi.update(userData);
-        message.success("User updated successfully!");
+        notification.success({ message: "User updated successfully!" });
       } else {
         await userApi.create(userData);
-        message.success("User created successfully!");
+        notification.success({ message: "User created successfully!" });
       }
       
       navigate(`/${apartmentBuildingId}/users`);
     } catch (error) {
-      message.error(isEditMode ? "Failed to update user" : "Failed to create user");
+      notification.error({ message: isEditMode ? "Failed to update user" : "Failed to create user" });
     } finally {
       setLoading(false);
     }

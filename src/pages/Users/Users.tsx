@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, Space, message } from "antd";
+import { Table, Typography, Button, Space, App } from "antd";
 import { PlusOutlined, UserOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { userApi } from "../../api/userApi";
@@ -9,6 +9,7 @@ import type { UserDto } from "../../types/user";
 const { Title } = Typography;
 
 const Users: React.FC = () => {
+  const { notification } = App.useApp();
   const [users, setUsers] = useState<UserDto[]>([]);
   const [loading, setLoading] = useState(false);
   const hasFetchedRef = useRef(false);
@@ -31,7 +32,7 @@ const Users: React.FC = () => {
         setUsers(response.data);
       }
     } catch  {
-      message.error("Failed to fetch users");
+      notification.error({ message: "Failed to fetch users" });
     } finally {
       setLoading(false);
     }
@@ -44,10 +45,10 @@ const Users: React.FC = () => {
   const handleDelete = async (userId: string) => {
     try {
       await userApi.delete([userId]);
-      message.success("User deleted successfully!");
+      notification.success({ message: "User deleted successfully!" });
       fetchUsers(); // Refresh the list
     } catch {
-      message.error("Failed to delete user");
+      notification.error({ message: "Failed to delete user" });
     }
   };
 

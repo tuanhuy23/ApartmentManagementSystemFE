@@ -9,22 +9,26 @@ import type {
 } from "../types/user";
 import type { ApiResponse } from "../types/apiResponse";
 import { tokenStorage } from "../utils/storage";
+import type { ApartmentBuildingDto } from "../types/apartmentBuilding";
 
 export const accountApi = {
   getAccount: (): Promise<ApiResponse<AccountInfoResponseDto>> => 
-    axiosClient.get("/Account/accountInfo"),
+    axiosClient.get("/account/account-info"),
+
+  getCurrentApartmentBuilding: (): Promise<ApiResponse<ApartmentBuildingDto>> => 
+    axiosClient.get("/account/apartment-building"),
   
   login: (credentials: LoginRequestDto): Promise<ApiResponse<TokenResponseDto>> => 
-    axiosClient.post("/Account/login", credentials),
+    axiosClient.post("/account/login", credentials),
   
   refreshToken: (refreshToken: RefreshTokenRequestDto): Promise<ApiResponse<TokenResponseDto>> => 
-    axiosClient.post("/Account/refreshToken", { refreshToken }),
+    axiosClient.post("/account/refresh-token", { refreshToken }),
   
   logout: (refreshToken: string): Promise<ApiResponse<TokenResponseDto>> => 
-    axiosClient.post("/Account/logout", { refreshToken }),
+    axiosClient.post("/account/logout", { refreshToken }),
   
   changePassword: (passwordData: ChangePasswordRequestDto): Promise<ApiResponse<ChangePasswordResponseDto>> => 
-    axiosClient.post("/Account/changePassword", passwordData),
+    axiosClient.post("/account/change-password", passwordData),
   
   logoutClient: () => {
     tokenStorage.removeToken();

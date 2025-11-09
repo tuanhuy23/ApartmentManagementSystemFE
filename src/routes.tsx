@@ -8,7 +8,10 @@ import UserForm from "./pages/Users/UserForm";
 import ApartmentBuildings from "./pages/ApartmentBuildings/ApartmentBuildings";
 import ApartmentBuildingForm from "./pages/ApartmentBuildings/ApartmentBuildingForm";
 import ApartmentDetail from "./pages/Apartment/ApartmentDetail";
+import Apartments from "./pages/Apartment/Apartments";
+import ApartmentForm from "./pages/Apartment/ApartmentForm";
 import FeeConfiguration from "./pages/FeeConfiguration/FeeConfiguration";
+import BillingCycleSetting from "./pages/BillingCycle/BillingCycleSetting";
 import Forbidden403 from "./pages/Error/Forbidden403";
 import NotFound404 from "./pages/Error/NotFound404";
 import AuthGuard from "./components/AuthGuard";
@@ -78,6 +81,20 @@ export default function AppRoutes() {
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
+      <Route path="/:apartmentBuildingId/apartments" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <Apartments />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/apartments/create" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <ApartmentForm />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
       <Route path="/:apartmentBuildingId/apartments/:apartmentId" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
@@ -89,6 +106,13 @@ export default function AppRoutes() {
         <AuthGuard>
           <ApartmentBuildingGuard>
             <FeeConfiguration />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/billing-cycle" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <BillingCycleSetting />
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />

@@ -59,7 +59,7 @@ axiosClient.interceptors.response.use(
             },
           });
           
-          const response = await refreshClient.post("/Account/refreshToken", { refreshToken });    
+          const response = await refreshClient.post("/account/refresh-token", { refreshToken });    
           if (response.data?.data) {
             tokenStorage.setToken(
               response.data.data.accessToken,

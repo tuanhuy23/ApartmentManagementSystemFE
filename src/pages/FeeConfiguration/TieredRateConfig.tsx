@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Table, Button, Space, Tag, Input, InputNumber, Form, message } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { Modal, Table, Button, Space, Input, InputNumber, Form, App, Popconfirm } from "antd";
+import { PlusOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { FeeType, FeeRateConfig } from "../../types/fee";
 import TierDetails from "./TierDetails";
 
@@ -17,8 +17,9 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
   onCancel,
   onSave,
   feeType,
-  buildingName,
+  buildingName: _buildingName,
 }) => {
+  const { notification } = App.useApp();
   const [rateConfigs, setRateConfigs] = useState<FeeRateConfig[]>(
     feeType.rateConfigs || []
   );
@@ -41,10 +42,11 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
   const handleCreateConfig = () => {
     form.validateFields().then((values) => {
       const newConfig: FeeRateConfig = {
-        id: Date.now().toString(),
+        id: "",
         configName: values.configName,
         vatRate: values.vatRate,
         bvmtFee: values.bvmtFee || 0,
+        unitName: values.unitName || "",
         status: "INACTIVE",
         tiers: [],
       };
@@ -73,31 +75,16 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
     setEditingConfig(null);
   };
 
-  const handleToggleStatus = (configId: string) => {
-    const targetConfig = rateConfigs.find((c) => c.id === configId);
-    if (!targetConfig) return;
-
-    const newStatus = targetConfig.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-    
-    setRateConfigs(
-      rateConfigs.map((config) => {
-        if (config.id === configId) {
-          return { ...config, status: newStatus };
-        }
-        // If activating this config, deactivate all others
-        if (newStatus === "ACTIVE" && config.status === "ACTIVE") {
-          return { ...config, status: "INACTIVE" };
-        }
-        return config;
-      })
-    );
+  const handleDeleteConfig = (configId: string) => {
+    setRateConfigs(rateConfigs.filter((config) => config.id !== configId));
+    notification.success({ message: "Config deleted successfully" });
   };
 
   const handleSave = () => {
     // Ensure only one active config
     const activeConfigs = rateConfigs.filter((c) => c.status === "ACTIVE");
     if (activeConfigs.length > 1) {
-      message.warning("Only one config can be active at a time");
+      notification.warning({ message: "Only one config can be active at a time" });
       return;
     }
     onSave(rateConfigs);
@@ -115,7 +102,7 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
       render: (_: unknown, record: FeeRateConfig) => `${record.vatRate * 100}%`,
     },
     {
-      title: "BVMT Fee",
+      title: "Other Fee",
       key: "bvmt",
       render: (_: unknown, record: FeeRateConfig) => `${record.bvmtFee * 100}%`,
     },
@@ -123,32 +110,40 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
       title: "Status",
       key: "status",
       render: (_: unknown, record: FeeRateConfig) => (
-        <Tag color={record.status === "ACTIVE" ? "green" : "default"}>
-          {record.status}
-        </Tag>
+        record.status === "ACTIVE" ? (
+          <CheckCircleOutlined style={{ color: "#52c41a", fontSize: "18px" }} />
+        ) : (
+          <CloseCircleOutlined style={{ color: "#8c8c8c", fontSize: "18px" }} />
+        )
       ),
     },
     {
       title: "Actions",
       key: "actions",
-      width: 200,
+      width: 120,
       render: (_: unknown, record: FeeRateConfig) => (
-        <Space size="small">
+        <Space size="middle">
           <Button
-            type="link"
+            type="text"
             size="small"
-            icon={<EditOutlined />}
+            icon={<EditOutlined style={{ color: "#000" }} />}
             onClick={() => handleEditTiers(record)}
+            style={{ color: "#000" }}
+          />
+          <Popconfirm
+            title="Delete config"
+            description="Are you sure you want to delete this config?"
+            onConfirm={() => handleDeleteConfig(record.id)}
+            okText="Yes"
+            cancelText="No"
           >
-            Edit Tiers
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleToggleStatus(record.id)}
-          >
-            {record.status === "ACTIVE" ? "Deactiv" : "Activate"}
-          </Button>
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined style={{ color: "#000" }} />}
+              style={{ color: "#000" }}
+            />
+          </Popconfirm>
         </Space>
       ),
     },
@@ -164,11 +159,8 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
         width={900}
       >
         <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 8 }}>
-            <strong>Fee Name:</strong> <span>{feeType.feeName}</span>
-          </div>
           <div>
-            <strong>Building:</strong> <span>{buildingName}</span>
+            <strong>Fee Name:</strong> <span>{feeType.feeName}</span>
           </div>
         </div>
 
@@ -231,23 +223,39 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
               max={1}
               step={0.01}
               formatter={(value) => `${(value! * 100).toFixed(0)}%`}
-              parser={(value) => parseFloat(value!.replace("%", "")) / 100}
+              parser={((value: string | undefined) => {
+                if (!value) return 0;
+                const num = parseFloat(value.replace("%", "")) / 100;
+                return isNaN(num) ? 0 : num;
+              }) as any}
             />
           </Form.Item>
 
           <Form.Item
+            name="unitName"
+            label="Unit Name"
+            rules={[{ required: true, message: "Please enter unit name" }]}
+          >
+            <Input placeholder="Enter unit name" />
+          </Form.Item>
+
+          <Form.Item
             name="bvmtFee"
-            label="BVMT Fee"
+            label="Other Fee"
             initialValue={0}
           >
             <InputNumber
               style={{ width: "100%" }}
-              placeholder="Enter BVMT fee (e.g., 0.00 for 0%)"
+              placeholder="Enter other fee (e.g., 0.00 for 0%)"
               min={0}
               max={1}
               step={0.01}
               formatter={(value) => `${(value! * 100).toFixed(0)}%`}
-              parser={(value) => parseFloat(value!.replace("%", "")) / 100}
+              parser={((value: string | undefined) => {
+                if (!value) return 0;
+                const num = parseFloat(value.replace("%", "")) / 100;
+                return isNaN(num) ? 0 : num;
+              }) as any}
             />
           </Form.Item>
         </Form>

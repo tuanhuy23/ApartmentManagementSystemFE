@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Card, Typography, message, Select, Upload, Image } from "antd";
+import { Form, Input, Button, Card, Typography, Select, Upload, Image, App } from "antd";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined, SaveOutlined, PlusOutlined, MinusCircleOutlined, UploadOutlined, LoadingOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
@@ -29,6 +29,7 @@ interface FormValues {
 }
 
 const ApartmentBuildingForm: React.FC = () => {
+  const { notification } = App.useApp();
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
@@ -46,10 +47,10 @@ const ApartmentBuildingForm: React.FC = () => {
       const fileUrl = await fileApi.upload(file as File);
       form.setFieldsValue({ apartmentBuildingImgUrl: fileUrl });
       setMainImagePreview(fileUrl);
-      message.success('Main image uploaded successfully');
+      notification.success({ message: 'Main image uploaded successfully' });
       onSuccess?.(fileUrl);
     } catch (error) {
-      message.error('Failed to upload main image');
+      notification.error({ message: 'Failed to upload main image' });
       onError?.(error as Error);
     } finally {
       setUploadingMainImage(false);
@@ -76,9 +77,9 @@ const ApartmentBuildingForm: React.FC = () => {
       const newImages = [...images];
       newImages[index] = { ...newImages[index], src: fileUrl };
       setImages(newImages);
-      message.success('Image uploaded successfully');
+      notification.success({ message: 'Image uploaded successfully' });
     } catch {
-      message.error('Failed to upload image');
+      notification.error({ message: 'Failed to upload image' });
     } finally {
       setUploadingImages(prev => {
         const newArray = [...prev];
@@ -115,19 +116,19 @@ const ApartmentBuildingForm: React.FC = () => {
       const response = await apartmentBuildingApi.createApartmentBuilding(apartmentBuildingData);
       
       if (response && response.status === 200) {
-        message.success({
-          content: "Apartment building created successfully!",
+        notification.success({ 
+          message: "Apartment building created successfully!",
           duration: 3,
         });
         setTimeout(() => {
           navigate(`/${apartmentBuildingId}/apartment-buildings`);
         }, 1500);
       } else {
-        message.warning("Apartment building created but unexpected response");
+        notification.warning({ message: "Apartment building created but unexpected response" });
         navigate("/apartment-buildings");
       }
     } catch {
-      message.error("Failed to create apartment building");
+      notification.error({ message: "Failed to create apartment building" });
     } finally {
       setLoading(false);
     }
@@ -307,12 +308,12 @@ const ApartmentBuildingForm: React.FC = () => {
               beforeUpload={(file) => {
                 const isImage = file.type.startsWith('image/');
                 if (!isImage) {
-                  message.error('You can only upload image files!');
+                  notification.error({ message: 'You can only upload image files!' });
                   return false;
                 }
                 const isLt10M = file.size / 1024 / 1024 < 10;
                 if (!isLt10M) {
-                  message.error('Image must be smaller than 10MB!');
+                  notification.error({ message: 'Image must be smaller than 10MB!' });
                   return false;
                 }
                 return true;
@@ -446,12 +447,12 @@ const ApartmentBuildingForm: React.FC = () => {
                       beforeUpload={(file) => {
                         const isImage = file.type.startsWith('image/');
                         if (!isImage) {
-                          message.error('You can only upload image files!');
+                          notification.error({ message: 'You can only upload image files!' });
                           return false;
                         }
                         const isLt10M = file.size / 1024 / 1024 < 10;
                         if (!isLt10M) {
-                          message.error('Image must be smaller than 10MB!');
+                          notification.error({ message: 'Image must be smaller than 10MB!' });
                           return false;
                         }
                         return true;

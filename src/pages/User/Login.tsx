@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Form, Input, Button, Card, Typography, message } from "antd";
+import { Form, Input, Button, Card, Typography, App } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { accountApi } from "../../api/accountApi";
@@ -11,6 +11,7 @@ import type { LoginRequestDto } from "../../types/user";
 const { Title } = Typography;
 
 const Login: React.FC = () => {
+  const { notification } = App.useApp();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -35,17 +36,17 @@ const Login: React.FC = () => {
           tokenStorage.setToken(response.data.accessToken, response.data.refreshToken);
           
           if (response.data.isActive === false) {
-            message.info("Please change your password to activate your account");
+            notification.info({ message: "Please change your password to activate your account" });
             navigate("/change-password");
             return;
           }
           
           login();
-          message.success("Login successful!");
+          notification.success({ message: "Login successful!" });
           const apartmentBuildingId = getApartmentBuildingIdFromToken();
           navigate(apartmentBuildingId ? `/${apartmentBuildingId}` : "/");
         } else {
-          message.error(response.error.message || "Login failed!");
+          notification.error({ message: response.error.message || "Login failed!" });
         }
     } catch (error: unknown) {
       let errorMessage = "Login failed!";
@@ -55,7 +56,7 @@ const Login: React.FC = () => {
         errorMessage = axiosError.response?.data?.message || "Login failed!";
       }
       
-      message.error(errorMessage);
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }

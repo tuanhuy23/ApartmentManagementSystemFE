@@ -5,7 +5,7 @@ import {
   Input, 
   Button, 
   Typography, 
-  message, 
+  App, 
   Space, 
   Row,
   Col
@@ -17,6 +17,7 @@ import type { AccountInfoResponseDto, ChangePasswordRequestDto } from "../../typ
 const { Title, Text } = Typography;
 
 const UserProfile: React.FC = () => {
+  const { notification } = App.useApp();
   const [profile, setProfile] = useState<AccountInfoResponseDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -35,7 +36,7 @@ const UserProfile: React.FC = () => {
         setProfile(response.data);
       }
     } catch  {
-      message.error("Failed to fetch profile information");
+      notification.error({ message: "Failed to fetch profile information" });
     } finally {
       setLoading(false);
     }
@@ -47,14 +48,14 @@ const UserProfile: React.FC = () => {
       setPasswordLoading(true);
       const response = await accountApi.changePassword(values);
       if (response.data?.isSuccess) {
-        message.success("Password changed successfully!");
+        notification.success({ message: "Password changed successfully!" });
         passwordForm.resetFields();
         setShowChangePassword(false);
       } else {
-        message.error("Failed to change password");
+        notification.error({ message: "Failed to change password" });
       }
     } catch {
-      message.error("Failed to change password");
+      notification.error({ message: "Failed to change password" });
     } finally {
       setPasswordLoading(false);
     }

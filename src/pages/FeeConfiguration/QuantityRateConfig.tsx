@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Modal, Table, Button, InputNumber, Input, Space, Form } from "antd";
+import React, { useState, useEffect, useRef } from "react";
+import { Modal, Table, Button, InputNumber, Input, Space } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { FeeType, QuantityRate } from "../../types/fee";
 
@@ -11,26 +11,33 @@ interface QuantityRateConfigProps {
   buildingName: string;
 }
 
+interface QuantityRateWithTempId extends QuantityRate {
+  tempId?: string;
+}
+
 const QuantityRateConfig: React.FC<QuantityRateConfigProps> = ({
   open,
   onCancel,
   onSave,
   feeType,
-  buildingName,
 }) => {
-  const [quantityRates, setQuantityRates] = useState<QuantityRate[]>(
-    feeType.quantityRates || []
-  );
+  const [quantityRates, setQuantityRates] = useState<QuantityRateWithTempId[]>([]);
+  const tempIdCounter = useRef(0);
 
   useEffect(() => {
     if (open) {
-      setQuantityRates(feeType.quantityRates || []);
+      const initialRates = (feeType.quantityRates || []).map((rate) => ({
+        ...rate,
+        tempId: (rate.id && rate.id.trim() !== "") ? rate.id : `temp_${tempIdCounter.current++}`,
+      }));
+      setQuantityRates(initialRates);
     }
   }, [open, feeType]);
 
   const handleAddRow = () => {
-    const newRate: QuantityRate = {
-      id: Date.now().toString(),
+    const newRate: QuantityRateWithTempId = {
+      id: "",
+      tempId: `temp_${tempIdCounter.current++}`,
       itemType: "",
       unitRate: 0,
       vatRate: 0,
@@ -38,30 +45,31 @@ const QuantityRateConfig: React.FC<QuantityRateConfigProps> = ({
     setQuantityRates([...quantityRates, newRate]);
   };
 
-  const handleDelete = (id: string) => {
-    setQuantityRates(quantityRates.filter((rate) => rate.id !== id));
+  const handleDelete = (tempId: string) => {
+    setQuantityRates(quantityRates.filter((rate) => rate.tempId !== tempId));
   };
 
-  const handleFieldChange = (id: string, field: keyof QuantityRate, value: any) => {
+  const handleFieldChange = (tempId: string, field: keyof QuantityRate, value: any) => {
     setQuantityRates(
       quantityRates.map((rate) =>
-        rate.id === id ? { ...rate, [field]: value } : rate
+        rate.tempId === tempId ? { ...rate, [field]: value } : rate
       )
     );
   };
 
   const handleSave = () => {
-    onSave(quantityRates);
+    const ratesToSave = quantityRates.map(({ tempId, ...rate }) => rate);
+    onSave(ratesToSave);
   };
 
   const columns = [
     {
       title: "Item Type",
       key: "itemType",
-      render: (_: unknown, record: QuantityRate) => (
+      render: (_: unknown, record: QuantityRateWithTempId) => (
         <Input
           value={record.itemType}
-          onChange={(e) => handleFieldChange(record.id, "itemType", e.target.value)}
+          onChange={(e) => handleFieldChange(record.tempId!, "itemType", e.target.value)}
           placeholder="Enter item type"
         />
       ),
@@ -69,30 +77,14 @@ const QuantityRateConfig: React.FC<QuantityRateConfigProps> = ({
     {
       title: "Unit Rate",
       key: "unitRate",
-      render: (_: unknown, record: QuantityRate) => (
+      render: (_: unknown, record: QuantityRateWithTempId) => (
         <InputNumber
           value={record.unitRate}
-          onChange={(value) => handleFieldChange(record.id, "unitRate", value || 0)}
+          onChange={(value) => handleFieldChange(record.tempId!, "unitRate", value || 0)}
           style={{ width: "100%" }}
           min={0}
           formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-          parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
-        />
-      ),
-    },
-    {
-      title: "VAT Rate",
-      key: "vatRate",
-      render: (_: unknown, record: QuantityRate) => (
-        <InputNumber
-          value={record.vatRate}
-          onChange={(value) => handleFieldChange(record.id, "vatRate", value || 0)}
-          style={{ width: "100%" }}
-          min={0}
-          max={1}
-          step={0.01}
-          formatter={(value) => `${(value! * 100).toFixed(0)}%`}
-          parser={(value) => parseFloat(value!.replace("%", "")) / 100}
+          parser={(value) => parseFloat(value!.replace(/\$\s?|(,*)/g, "")) || 0}
         />
       ),
     },
@@ -100,15 +92,14 @@ const QuantityRateConfig: React.FC<QuantityRateConfigProps> = ({
       title: "Actions",
       key: "actions",
       width: 100,
-      render: (_: unknown, record: QuantityRate) => (
+      render: (_: unknown, record: QuantityRateWithTempId) => (
         <Button
-          type="link"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(record.id)}
-        >
-          Delete
-        </Button>
+          type="text"
+          size="small"
+          icon={<DeleteOutlined style={{ color: "#000" }} />}
+          onClick={() => handleDelete(record.tempId!)}
+          style={{ color: "#000" }}
+        />
       ),
     },
   ];
@@ -122,16 +113,13 @@ const QuantityRateConfig: React.FC<QuantityRateConfigProps> = ({
       width={800}
     >
       <div style={{ marginBottom: 16 }}>
-        <div style={{ marginBottom: 8 }}>
-          <strong>Fee Name:</strong> <span>{feeType.feeName}</span>
-        </div>
         <div>
-          <strong>Building:</strong> <span>{buildingName}</span>
+          <strong>Fee Name:</strong> <span>{feeType.feeName}</span>
         </div>
       </div>
 
       <Table
-        rowKey="id"
+        rowKey="tempId"
         dataSource={quantityRates}
         columns={columns}
         pagination={false}

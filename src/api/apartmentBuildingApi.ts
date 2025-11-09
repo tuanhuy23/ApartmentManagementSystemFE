@@ -1,5 +1,4 @@
 import axiosClient from "./axiosClient";
-import { getApartmentBuildingIdFromToken } from "../utils/token";
 import type { 
   ApartmentBuildingDto, 
   CreateApartmentBuildingDto 
@@ -8,8 +7,8 @@ import type { ApiResponse } from "../types/apiResponse";
 
 export const apartmentBuildingApi = {
   getApartmentBuildings: (): Promise<ApiResponse<ApartmentBuildingDto[]>> => 
-    axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/ApartmentBuilding`),
+    axiosClient.get(`/apartment-building`),
   
   createApartmentBuilding: (data: CreateApartmentBuildingDto): Promise<ApiResponse<ApartmentBuildingDto>> => 
-    axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/ApartmentBuilding`, data),
+    axiosClient.post(`/apartment-building`, data),
 };

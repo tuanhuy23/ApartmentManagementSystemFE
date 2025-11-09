@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import {
   Card,
   Typography,
@@ -13,7 +14,6 @@ import {
   Space,
   Divider,
   Input,
-  message,
   Row,
   Col,
   Select,
@@ -23,107 +23,165 @@ import type { FilterDropdownProps } from "antd/es/table/interface";
 import {
   PlusOutlined,
   EyeOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  StopOutlined,
   CloseOutlined,
-  SearchOutlined,
+  DeleteOutlined,
+  ReloadOutlined,
+  SendOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
+import { apartmentApi } from "../../api/apartmentApi";
+import { feeApi } from "../../api/feeApi";
+import { feeConfigurationApi } from "../../api/feeConfigurationApi";
 import type {
-  Apartment,
   FeeNotice,
   UtilityReading,
   FeeType,
   InvoiceFormData,
+  ApartmentDto,
+  UtilityReadingDto,
 } from "../../types/apartment";
+import FeeNoticeDetailModal from "./FeeNoticeDetailModal";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const ApartmentDetail: React.FC = () => {
-  const { modal } = App.useApp();
+  const { apartmentId } = useParams<{ apartmentId: string }>();
+  const { modal, notification } = App.useApp();
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [selectedFeeNoticeId, setSelectedFeeNoticeId] = useState<string | null>(null);
   const [form] = Form.useForm<InvoiceFormData>();
-  const [initialFormValues, setInitialFormValues] = useState<Partial<InvoiceFormData> | null>(null);
+  const [apartmentForm] = Form.useForm();
   const [feeNoticeSearchText, setFeeNoticeSearchText] = useState("");
   const [utilityReadingSearchText, setUtilityReadingSearchText] = useState("");
-  const [currentInvoiceStatus, setCurrentInvoiceStatus] = useState<"DRAFT" | "ISSUED">("DRAFT");
-  const [currentPaymentStatus, setCurrentPaymentStatus] = useState<"N/A" | "UNPAID" | "PAID">("N/A");
+  const [currentInvoiceStatus] = useState<"DRAFT" | "ISSUED">("DRAFT");
+  const [currentPaymentStatus] = useState<"N/A" | "UNPAID" | "PAID">("N/A");
   const [selectedFees, setSelectedFees] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [apartmentData, setApartmentData] = useState<ApartmentDto | null>(null);
+  const [feeNotices, setFeeNotices] = useState<FeeNotice[]>([]);
+  const [utilityReadings, setUtilityReadings] = useState<UtilityReading[]>([]);
+  const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
+  const [oldReadings, setOldReadings] = useState<Record<string, UtilityReadingDto | null>>({});
 
-  const apartmentData: Apartment = {
-    id: "apt-101",
-    code: "APARTMENT-101",
-    area: 80.5,
-    buildingName: "TÒA A",
-    registeredVehicles: {
-      total: 2,
-      cars: 1,
-      motorbikes: 1,
-    },
-    closingDate: 20,
-    managerName: "[BMB Manager Name]",
+  useEffect(() => {
+    if (apartmentId) {
+      fetchApartmentDetail();
+      fetchFeeNotices();
+      fetchUtilityReadings();
+    }
+  }, [apartmentId]);
+
+  useEffect(() => {
+    if (isModalVisible) {
+      fetchFeeTypes();
+    }
+  }, [isModalVisible]);
+
+  useEffect(() => {
+    if (selectedFees.length > 0 && apartmentId) {
+      fetchOldReadings();
+    }
+  }, [selectedFees, apartmentId]);
+
+  const fetchApartmentDetail = async () => {
+    if (!apartmentId) return;
+    try {
+      setLoading(true);
+      const response = await apartmentApi.getById(apartmentId);
+      if (response.data) {
+        setApartmentData(response.data);
+        apartmentForm.setFieldsValue({
+          name: response.data.name,
+          area: response.data.area,
+          floor: response.data.floor,
+        });
+      }
+    } catch {
+      notification.error({ message: "Failed to fetch apartment details" });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const feeNotices: FeeNotice[] = [
-    {
-      id: "1",
-      cycle: "11/2025",
-      totalAmount: 1500000,
-      status: "DRAFT",
-      paymentStatus: "N/A",
-    },
-    {
-      id: "2",
-      cycle: "10/2025",
-      totalAmount: 1450000,
-      status: "ISSUED",
-      paymentStatus: "UNPAID",
-    },
-    {
-      id: "3",
-      cycle: "09/2025",
-      totalAmount: 1300000,
-      status: "ISSUED",
-      paymentStatus: "PAID",
-    },
-  ];
+  const fetchFeeNotices = async () => {
+    if (!apartmentId) return;
+    try {
+      setLoading(true);
+      const response = await feeApi.getByApartmentId(apartmentId);
+      if (response.data) {
+        const convertedNotices: FeeNotice[] = response.data.map((dto) => ({
+          id: dto.id,
+          cycle: dto.billingCycle,
+          totalAmount: dto.totalAmount,
+          status: dto.status as "DRAFT" | "ISSUED",
+          paymentStatus: dto.paymentStatus as "N/A" | "UNPAID" | "PAID",
+        }));
+        setFeeNotices(convertedNotices);
+      }
+    } catch {
+      notification.error({ message: "Failed to fetch fee notices" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const utilityReadings: UtilityReading[] = [
-    {
-      id: "1",
-      type: "Electricity",
-      readingDate: "2025-10-22",
-      readingValue: 1800,
-      consumption: 150,
-      unit: "kWh",
-    },
-    {
-      id: "2",
-      type: "Electricity",
-      readingDate: "2025-09-20",
-      readingValue: 1650,
-      consumption: 100,
-      unit: "kWh",
-    },
-    {
-      id: "3",
-      type: "Water",
-      readingDate: "2025-10-22",
-      readingValue: 250,
-      consumption: 15,
-      unit: "m³",
-    },
-  ];
+  const fetchUtilityReadings = async () => {
+    if (!apartmentId) return;
+    try {
+      const response = await feeApi.getUtilityReadings(apartmentId);
+      if (response.data) {
+        const convertedReadings: UtilityReading[] = response.data.map((dto) => ({
+          id: dto.id,
+          type: dto.feeTypeName === "Electricity" ? "Electricity" : "Water",
+          readingDate: dto.readingDate,
+          readingValue: dto.currentReading,
+          consumption: 0,
+          unit: dto.feeTypeName === "Electricity" ? "kWh" : "m³",
+        }));
+        setUtilityReadings(convertedReadings);
+      }
+    } catch {
+      notification.error({ message: "Failed to fetch utility readings" });
+    }
+  };
 
-  const feeTypes: FeeType[] = [
-    { id: "1", name: "Điện", type: "TIERED" },
-    { id: "2", name: "Nước", type: "TIERED" },
-    { id: "3", name: "Dịch vụ", type: "SERVICE" },
-    { id: "4", name: "Gửi xe", type: "QUANTITY" },
-  ];
+  const fetchFeeTypes = async () => {
+    try {
+      const response = await feeConfigurationApi.getAll();
+      if (response.data) {
+        const convertedTypes: FeeType[] = response.data
+          .filter((dto) => dto.isActive)
+          .map((dto) => ({
+            id: dto.id,
+            name: dto.name,
+            type: dto.calculationType as "TIERED" | "QUANTITY" | "SERVICE",
+          }));
+        setFeeTypes(convertedTypes);
+      }
+    } catch {
+      notification.error({ message: "Failed to fetch fee types" });
+    }
+  };
+
+  const fetchOldReadings = async () => {
+    if (!apartmentId) return;
+    try {
+      const response = await feeApi.getUtilityReadings(apartmentId);
+      if (response.data) {
+        const readingsMap: Record<string, UtilityReadingDto | null> = {};
+        selectedFees.forEach((feeId) => {
+          const reading = response.data.find((r) => r.feeTypeId === feeId);
+          readingsMap[feeId] = reading || null;
+        });
+        setOldReadings(readingsMap);
+      }
+    } catch {
+      notification.error({ message: "Failed to fetch old readings" });
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -162,7 +220,7 @@ const ApartmentDetail: React.FC = () => {
     filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
       <div style={{ padding: 8 }}>
         <Input
-          placeholder={`Tìm kiếm ${dataIndex}`}
+          placeholder={`Search ${dataIndex}`}
           value={selectedKeys[0]}
           onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
           onPressEnter={() => confirm()}
@@ -175,7 +233,7 @@ const ApartmentDetail: React.FC = () => {
             size="small"
             style={{ width: 90 }}
           >
-            Tìm kiếm
+            Search
           </Button>
           <Button
             onClick={() => {
@@ -185,7 +243,7 @@ const ApartmentDetail: React.FC = () => {
             size="small"
             style={{ width: 90 }}
           >
-            Đặt lại
+            Reset
           </Button>
         </Space>
       </div>
@@ -198,20 +256,20 @@ const ApartmentDetail: React.FC = () => {
 
   const feeNoticeColumns: ColumnsType<FeeNotice> = [
     {
-      title: "Chu kỳ",
+      title: "Cycle",
       dataIndex: "cycle",
       key: "cycle",
       ...getColumnSearchProps("cycle"),
     },
     {
-      title: "Tổng tiền",
+      title: "Total Amount",
       dataIndex: "totalAmount",
       key: "totalAmount",
       render: (amount: number) => formatCurrency(amount),
       sorter: (a, b) => a.totalAmount - b.totalAmount,
     },
     {
-      title: "Trạng thái",
+      title: "Status",
       dataIndex: "status",
       key: "status",
       render: (status: string) => getStatusTag(status),
@@ -222,7 +280,7 @@ const ApartmentDetail: React.FC = () => {
       onFilter: (value: any, record: FeeNotice) => record.status === value,
     },
     {
-      title: "Trạng thái TT",
+      title: "Payment Status",
       dataIndex: "paymentStatus",
       key: "paymentStatus",
       render: (paymentStatus: string) => getPaymentStatusTag(paymentStatus),
@@ -234,54 +292,44 @@ const ApartmentDetail: React.FC = () => {
       onFilter: (value: any, record: FeeNotice) => record.paymentStatus === value,
     },
     {
-      title: "Thao tác",
+      title: "Actions",
       key: "actions",
+      width: 150,
       render: (_: unknown, record: FeeNotice) => (
-        <Space>
-          {record.status === "DRAFT" ? (
-            <>
-              <Button
-                type="link"
-                icon={<EyeOutlined />}
-                onClick={() => message.info("Xem Chi tiết Draft")}
-              >
-                Xem Chi tiết Draft
-              </Button>
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={() => message.success("Đã phát hành")}
-              >
-                PHÁT HÀNH
-              </Button>
-              <Button
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => message.warning("Đã hủy Draft")}
-              >
-                Hủy Draft
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                type="link"
-                icon={<EyeOutlined />}
-                onClick={() => message.info("Xem Chi tiết")}
-              >
-                Chi tiết
-              </Button>
-              {record.paymentStatus !== "PAID" && (
-                <Button
-                  danger
-                  icon={<StopOutlined />}
-                  onClick={() => message.warning("Đã thu hồi/hủy")}
-                >
-                  THU HỒI/HỦY
-                </Button>
-              )}
-            </>
+        <Space size="small">
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              setSelectedFeeNoticeId(record.id);
+              setIsDetailModalVisible(true);
+            }}
+            style={{ color: "#000" }}
+            title="View Details"
+          />
+          <Button
+            type="link"
+            icon={<ReloadOutlined />}
+            onClick={() => notification.info({ message: "Recalculate" })}
+            style={{ color: "#000" }}
+            title="Recalculate"
+          />
+          {record.status === "DRAFT" && (
+            <Button
+              type="link"
+              icon={<SendOutlined />}
+              onClick={() => notification.success({ message: "Issued successfully" })}
+              style={{ color: "#000" }}
+              title="Issue"
+            />
           )}
+          <Button
+            type="link"
+            icon={<DeleteOutlined />}
+            onClick={() => notification.warning({ message: record.status === "DRAFT" ? "Draft cancelled" : "Revoked/Cancelled" })}
+            style={{ color: "#000" }}
+            title={record.status === "DRAFT" ? "Cancel Draft" : "Revoke/Cancel"}
+          />
         </Space>
       ),
     },
@@ -289,25 +337,25 @@ const ApartmentDetail: React.FC = () => {
 
   const utilityReadingColumns: ColumnsType<UtilityReading> = [
     {
-      title: "Loại",
+      title: "Type",
       dataIndex: "type",
       key: "type",
-      render: (type: string) => type === "Electricity" ? "Điện" : "Nước",
+      render: (type: string) => type === "Electricity" ? "Electricity" : "Water",
       filters: [
-        { text: "Điện", value: "Electricity" },
-        { text: "Nước", value: "Water" },
+        { text: "Electricity", value: "Electricity" },
+        { text: "Water", value: "Water" },
       ],
       onFilter: (value: any, record: UtilityReading) => record.type === value,
     },
     {
-      title: "Ngày Đọc",
+      title: "Reading Date",
       dataIndex: "readingDate",
       key: "readingDate",
       ...getColumnSearchProps("readingDate"),
       sorter: (a, b) => a.readingDate.localeCompare(b.readingDate),
     },
     {
-      title: "Giá trị Chỉ số",
+      title: "Reading Value",
       dataIndex: "readingValue",
       key: "readingValue",
       render: (value: number, record: UtilityReading) =>
@@ -315,7 +363,7 @@ const ApartmentDetail: React.FC = () => {
       sorter: (a, b) => a.readingValue - b.readingValue,
     },
     {
-      title: "Tiêu thụ (Tự tính)",
+      title: "Consumption (Auto-calculated)",
       dataIndex: "consumption",
       key: "consumption",
       render: (consumption: number, record: UtilityReading) =>
@@ -336,7 +384,7 @@ const ApartmentDetail: React.FC = () => {
 
   const filteredUtilityReadings = utilityReadings.filter((reading) => {
     if (!utilityReadingSearchText) return true;
-    const typeText = reading.type === "Electricity" ? "Điện" : "Nước";
+    const typeText = reading.type === "Electricity" ? "Electricity" : "Water";
     return (
       typeText.toLowerCase().includes(utilityReadingSearchText.toLowerCase()) ||
       reading.readingDate.toLowerCase().includes(utilityReadingSearchText.toLowerCase()) ||
@@ -345,41 +393,120 @@ const ApartmentDetail: React.FC = () => {
     );
   });
 
-  const handleCreateInvoice = () => {
-    const initialFees = ["1", "2", "3", "4"];
-    setSelectedFees(initialFees);
-    const initialValues = {
-      cycle: "11/2025",
-      selectedFees: initialFees,
-      electricity: {
-        newReadingDate: dayjs("2025-11-22"),
-        newReading: 1950,
-        oldReading: 1800,
-        oldDate: "22/10",
-      },
-      water: {
-        newReadingDate: dayjs("2025-11-22"),
-        newReading: 265,
-        oldReading: 250,
-        oldDate: "22/10",
-      },
-      parking: {
-        adjustedQuantity: apartmentData.registeredVehicles.total,
-      },
-    };
-    setInitialFormValues(initialValues);
+  const handleUpdateApartment = async () => {
+    try {
+      await apartmentForm.validateFields();
+      if (!apartmentId || !apartmentData) return;
+      
+      const values = apartmentForm.getFieldsValue();
+      const updateData = {
+        apartmentBuildingId: apartmentData.apartmentBuildingId,
+        name: values.name,
+        area: values.area,
+        floor: values.floor,
+      };
+      
+      setLoading(true);
+      await apartmentApi.update(apartmentId, updateData);
+      notification.success({ message: "Apartment updated successfully!" });
+      fetchApartmentDetail();
+    } catch (error: any) {
+      if (error?.errorFields) {
+        notification.error({ message: "Please check your input" });
+      } else {
+        notification.error({ message: "Failed to update apartment" });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateInvoice = async () => {
     setIsModalVisible(true);
-    form.setFieldsValue(initialValues);
+    form.resetFields();
+    setSelectedFees([]);
+    
+    if (apartmentId) {
+      await fetchUtilityReadings();
+    }
   };
 
   const handleSaveDraft = async () => {
     try {
-      await form.validateFields();
-      message.success("Đã lưu & tính nháp thành công!");
+      const values = await form.validateFields();
+      if (!apartmentId || !apartmentData) {
+        notification.error({ message: "Apartment information is missing" });
+        return;
+      }
+
+      setLoading(true);
+
+      const feeDetails = selectedFees.map((feeId) => {
+        const feeType = feeTypes.find((f) => f.id === feeId);
+        if (!feeType) return null;
+
+        const fieldName = feeType.name.toLowerCase().replace(/\s+/g, "");
+        const formData = (values as any)[fieldName];
+
+        if (feeType.type === "TIERED") {
+          const oldReading = oldReadings[feeId];
+          return {
+            apartmentId,
+            feeTypeId: feeId,
+            utilityReading: {
+              utilityCurentReadingId: oldReading?.id || null,
+              currentReading: formData?.newReading || 0,
+              readingDate: formData?.newReadingDate
+                ? formData.newReadingDate.format("YYYY-MM-DD")
+                : dayjs().format("YYYY-MM-DD"),
+            },
+          };
+        }
+
+        if (feeType.type === "QUANTITY") {
+          return {
+            apartmentId,
+            feeTypeId: feeId,
+            utilityReading: {
+              utilityCurentReadingId: null,
+              currentReading: formData?.adjustedQuantity || 0,
+              readingDate: dayjs().format("YYYY-MM-DD"),
+            },
+          };
+        }
+
+        return null;
+      }).filter((detail) => detail !== null) as any[];
+
+      const convertCycleToApiFormat = (cycle: string): string => {
+        const [month, year] = cycle.split("/");
+        return `${year}-${month.padStart(2, "0")}`;
+      };
+
+      const createData = {
+        id: null,
+        apartmentId,
+        apartmentBuildingId: apartmentData.apartmentBuildingId,
+        billingCycle: convertCycleToApiFormat(values.cycle),
+        feeTypeIds: selectedFees,
+        feeDetails,
+      };
+
+      await feeApi.create(createData);
+      notification.success({ message: "Draft saved and calculated successfully!" });
       setIsModalVisible(false);
       form.resetFields();
-    } catch (error) {
-      message.error("Vui lòng kiểm tra lại thông tin!");
+      setSelectedFees([]);
+      fetchFeeNotices();
+      fetchUtilityReadings();
+    } catch (error: any) {
+      if (error?.errorFields) {
+        notification.error({ message: "Please check your information!" });
+      } else {
+        notification.error({ message: error?.response?.data?.message || "Failed to save draft" });
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -390,14 +517,13 @@ const ApartmentDetail: React.FC = () => {
     }
     
     modal.confirm({
-      title: "Xác nhận hủy",
-      content: "Bạn có chắc muốn hủy? Tất cả thay đổi sẽ bị mất.",
-      okText: "Xác nhận",
-      cancelText: "Hủy",
+      title: "Confirm Cancel",
+      content: "Are you sure you want to cancel? All changes will be lost.",
+      okText: "Confirm",
+      cancelText: "Cancel",
       onOk: () => {
         setIsModalVisible(false);
         form.resetFields();
-        setInitialFormValues(null);
       },
     });
   };
@@ -406,91 +532,88 @@ const ApartmentDetail: React.FC = () => {
   return (
     <div style={{ padding: 24 }}>
       <Title level={2} style={{ marginBottom: 24 }}>
-        Chi tiết Căn hộ: {apartmentData.code}
+        Apartment Details: {apartmentData?.name || "Loading..."}
       </Title>
 
       <Card
-        title="PHẦN A: Thông tin Cơ bản (Read-Only)"
+        title="Basic Information"
         style={{ marginBottom: 24 }}
+        extra={
+          <Button type="primary" onClick={handleUpdateApartment} loading={loading}>
+            Update
+          </Button>
+        }
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          Khu vực này hiển thị dữ liệu nền tảng dùng cho tính toán AREA và
-          QUANTITY, đồng thời xác định Tòa nhà áp dụng cấu hình giá.
+          This area displays foundational data used for AREA and QUANTITY calculations, and determines the building that applies the price configuration.
         </Text>
 
-        <Row gutter={[24, 16]}>
-          <Col xs={24} sm={12}>
-            <div>
-              <Text strong>Mã Căn hộ: </Text>
-              <Text>{apartmentData.code}</Text>
-            </div>
-          </Col>
-          <Col xs={24} sm={12}>
-            <div>
-              <Text strong>Tòa nhà: </Text>
-              <Text>{apartmentData.buildingName}</Text>
-            </div>
-          </Col>
-          <Col xs={24} sm={12}>
-            <div>
-              <Text strong>Diện tích (m²): </Text>
-              <Text>{apartmentData.area}</Text>
-            </div>
-          </Col>
-          <Col xs={24} sm={12}>
-            <div>
-              <Text strong>Số xe đã ĐK: </Text>
-              <Text>
-                {apartmentData.registeredVehicles.total} (
-                {apartmentData.registeredVehicles.cars} Ô tô,{" "}
-                {apartmentData.registeredVehicles.motorbikes} Xe máy)
-              </Text>
-            </div>
-          </Col>
-          <Col xs={24} sm={12}>
-            <div>
-              <Text strong>Ngày Chốt Sổ (Setting): </Text>
-              <Text>{apartmentData.closingDate} hàng tháng</Text>
-            </div>
-          </Col>
-          <Col xs={24} sm={12}>
-            <div>
-              <Text strong>Quản lý: </Text>
-              <Text>{apartmentData.managerName}</Text>
-            </div>
-          </Col>
-        </Row>
+        <Form form={apartmentForm} layout="vertical">
+          <Row gutter={[24, 16]}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Apartment Code">
+                <Input value={apartmentData?.name || ""} readOnly />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Area (m²)"
+                name="area"
+                rules={[{ required: true, message: "Please enter area" }]}
+              >
+                <InputNumber style={{ width: "100%" }} min={0} step={0.01} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Floor"
+                name="floor"
+                rules={[{ required: true, message: "Please enter floor" }]}
+              >
+                <InputNumber style={{ width: "100%" }} min={0} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Name"
+                name="name"
+                rules={[{ required: true, message: "Please enter name" }]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
       </Card>
 
-      <Card title="PHẦN B: Quản lý Hóa đơn & Phát hành (Fee Notice Management)">
+      <Card title="PART B: Invoice Management & Issuance (Fee Notice Management)">
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          Đây là khu vực thao tác chính. Manager bắt đầu luồng tính phí tại đây
-          và xem kết quả lịch sử.
+          This is the main operational area. Manager starts the fee calculation flow here and views historical results.
         </Text>
 
         <div style={{ marginBottom: 16 }}>
-          <Title level={4}>1. Thao tác Tạo Hóa đơn (Create Invoice Action)</Title>
+          <Title level={4}>1. Create Invoice Action</Title>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleCreateInvoice}
             size="large"
           >
-            Tạo Hóa đơn Mới
+            Create New Invoice
           </Button>
           <Text type="secondary" style={{ marginLeft: 16 }}>
-            → Kích hoạt Form Modal Nhập liệu (Xem Mục C)
+            → Activates Data Entry Form Modal (See Part C)
           </Text>
         </div>
 
         <Divider />
 
         <div style={{ marginBottom: 16 }}>
-          <Title level={4}>2. Lịch sử Hóa đơn (Fee Notice History)</Title>
+          <Title level={4}>2. Invoice History (Fee Notice History)</Title>
         </div>
 
         <Input.Search
-          placeholder="Tìm kiếm trong bảng..."
+          placeholder="Search in table..."
           allowClear
           style={{ marginBottom: 16, maxWidth: 400 }}
           onSearch={(value) => setFeeNoticeSearchText(value)}
@@ -507,13 +630,13 @@ const ApartmentDetail: React.FC = () => {
             pageSize: 5,
             showSizeChanger: false,
             showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} mục`,
+              `${range[0]}-${range[1]} of ${total} items`,
           }}
         />
       </Card>
 
       <Modal
-        title="PHẦN C: Form Modal Tạo Hóa đơn"
+        title="Create Invoice Form Modal"
         open={isModalVisible}
         onCancel={() => {}}
         footer={null}
@@ -542,31 +665,31 @@ const ApartmentDetail: React.FC = () => {
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={12}>
             <div>
-              <Text strong>Trạng thái: </Text>
+              <Text strong>Status: </Text>
               {getStatusTag(currentInvoiceStatus)}
             </div>
           </Col>
           <Col span={12}>
             <div>
-              <Text strong>Trạng thái TT: </Text>
+              <Text strong>Payment Status: </Text>
               {getPaymentStatusTag(currentPaymentStatus)}
             </div>
           </Col>
         </Row>
 
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          Đây là giao diện gộp cho việc chọn phí, nhập chỉ số, và tính toán.
+          This is a combined interface for selecting fees, entering readings, and calculations.
         </Text>
 
         <Form form={form} layout="vertical">
           <Row gutter={24}>
             <Col span={12}>
               <Form.Item
-                label="Tháng Tính Phí"
+                label="Billing Month"
                 name="cycle"
-                rules={[{ required: true, message: "Bắt buộc chọn" }]}
+                rules={[{ required: true, message: "Required" }]}
               >
-                <Select style={{ width: "100%" }} placeholder="Chọn chu kỳ">
+                <Select style={{ width: "100%" }} placeholder="Select cycle">
                   <Option value="11/2025">11/2025</Option>
                   <Option value="10/2025">10/2025</Option>
                   <Option value="09/2025">09/2025</Option>
@@ -578,10 +701,10 @@ const ApartmentDetail: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                label="Chọn Phí"
+                label="Select Fees"
                 name="selectedFees"
                 rules={[
-                  { required: true, message: "Vui lòng chọn ít nhất một loại phí" },
+                  { required: true, message: "Please select at least one fee type" },
                 ]}
               >
                 <Checkbox.Group
@@ -601,165 +724,115 @@ const ApartmentDetail: React.FC = () => {
             </Col>
           </Row>
 
-          {selectedFees.includes("1") && (
-            <>
-              <Divider orientation="left">Phí Điện (TIERED)</Divider>
+          {selectedFees.map((feeId) => {
+            const feeType = feeTypes.find((f) => f.id === feeId);
+            if (!feeType) return null;
 
-              <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item
-                label="Ngày Đọc Mới"
-                name={["electricity", "newReadingDate"]}
-                rules={[
-                  { 
-                    required: selectedFees.includes("1"), 
-                    message: "Bắt buộc nhập" 
-                  }
-                ]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  format="DD/MM/YYYY"
-                  placeholder="Chọn ngày"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item
-                label="Chỉ số Mới"
-                name={["electricity", "newReading"]}
-                rules={[
-                  { 
-                    required: selectedFees.includes("1"), 
-                    message: "Bắt buộc nhập" 
-                  }
-                ]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  placeholder="Nhập chỉ số"
-                  min={0}
-                  step={0.01}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item label="Chỉ số Cũ">
-                <Input
-                  value="1800"
-                  readOnly
-                  style={{ backgroundColor: "#f5f5f5" }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item label="Ngày Cũ">
-                <Input
-                  value="22/10"
-                  readOnly
-                  style={{ backgroundColor: "#f5f5f5" }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-            </>
-          )}
+            const fieldName = feeType.name.toLowerCase().replace(/\s+/g, "");
+            const oldReading = oldReadings[feeId];
 
-          {selectedFees.includes("2") && (
-            <>
-              <Divider orientation="left">Phí Nước (TIERED)</Divider>
+            if (feeType.type === "TIERED") {
+              return (
+                <React.Fragment key={feeId}>
+                  <Divider orientation="left">{feeType.name} Fee (TIERED)</Divider>
+                  <Row gutter={16}>
+                    <Col span={6}>
+                      <Form.Item
+                        label="New Reading Date"
+                        name={[fieldName, "newReadingDate"]}
+                        rules={[
+                          {
+                            required: selectedFees.includes(feeId),
+                            message: "Required",
+                          },
+                        ]}
+                      >
+                        <DatePicker
+                          style={{ width: "100%" }}
+                          format="DD/MM/YYYY"
+                          placeholder="Select date"
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={6}>
+                      <Form.Item
+                        label="New Reading"
+                        name={[fieldName, "newReading"]}
+                        rules={[
+                          {
+                            required: selectedFees.includes(feeId),
+                            message: "Required",
+                          },
+                        ]}
+                      >
+                        <InputNumber
+                          style={{ width: "100%" }}
+                          placeholder="Enter reading"
+                          min={0}
+                          step={0.01}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={6}>
+                      <Form.Item label="Old Reading">
+                        <Input
+                          value={oldReading?.currentReading || ""}
+                          readOnly
+                          style={{ backgroundColor: "#f5f5f5" }}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={6}>
+                      <Form.Item label="Old Date">
+                        <Input
+                          value={
+                            oldReading
+                              ? dayjs(oldReading.readingDate).format("DD/MM")
+                              : ""
+                          }
+                          readOnly
+                          style={{ backgroundColor: "#f5f5f5" }}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </React.Fragment>
+              );
+            }
 
-              <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item
-                label="Ngày Đọc Mới"
-                name={["water", "newReadingDate"]}
-                rules={[
-                  { 
-                    required: selectedFees.includes("2"), 
-                    message: "Bắt buộc nhập" 
-                  }
-                ]}
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  format="DD/MM/YYYY"
-                  placeholder="Chọn ngày"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item
-                label="Chỉ số Mới"
-                name={["water", "newReading"]}
-                rules={[
-                  { 
-                    required: selectedFees.includes("2"), 
-                    message: "Bắt buộc nhập" 
-                  }
-                ]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  placeholder="Nhập chỉ số"
-                  min={0}
-                  step={0.01}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item label="Chỉ số Cũ">
-                <Input
-                  value="250"
-                  readOnly
-                  style={{ backgroundColor: "#f5f5f5" }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item label="Ngày Cũ">
-                <Input
-                  value="22/10"
-                  readOnly
-                  style={{ backgroundColor: "#f5f5f5" }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-            </>
-          )}
+            if (feeType.type === "QUANTITY") {
+              return (
+                <React.Fragment key={feeId}>
+                  <Divider orientation="left">{feeType.name} Fee (QUANTITY)</Divider>
+                  <Form.Item
+                    label="Adjusted Quantity"
+                    name={[fieldName, "adjustedQuantity"]}
+                  >
+                    <InputNumber
+                      style={{ width: 200 }}
+                      placeholder="Enter quantity"
+                      min={0}
+                    />
+                  </Form.Item>
+                </React.Fragment>
+              );
+            }
 
-          {selectedFees.includes("4") && (
-            <>
-              <Divider orientation="left">Phí Gửi xe (QUANTITY)</Divider>
-
-              <Form.Item
-                label="Số lượng điều chỉnh"
-                name={["parking", "adjustedQuantity"]}
-              >
-                <InputNumber
-                  style={{ width: 200 }}
-                  placeholder="Nhập số lượng"
-                  min={0}
-                  defaultValue={apartmentData.registeredVehicles.total}
-                />
-              </Form.Item>
-            </>
-          )}
+            return null;
+          })}
 
           <Divider />
 
-          <Card title="PHẦN D: Lịch sử Chỉ số Đã nhập" style={{ marginTop: 16 }}>
+          <Card title="Entered Reading History" style={{ marginTop: 16 }}>
             <Text
               type="secondary"
               style={{ display: "block", marginBottom: 16 }}
             >
-              Khu vực này chỉ đóng vai trò là một Sổ cái (Ledger) để kiểm tra
-              lịch sử dữ liệu thô.
+              This area serves as a Ledger to check raw data history.
             </Text>
 
             <Input.Search
-              placeholder="Tìm kiếm trong bảng..."
+              placeholder="Search in table..."
               allowClear
               style={{ marginBottom: 16, maxWidth: 400 }}
               onSearch={(value) => setUtilityReadingSearchText(value)}
@@ -776,21 +849,30 @@ const ApartmentDetail: React.FC = () => {
                 pageSize: 5,
                 showSizeChanger: false,
                 showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} của ${total} mục`,
+                  `${range[0]}-${range[1]} of ${total} items`,
               }}
             />
           </Card>
 
           <div style={{ marginTop: 24, textAlign: "right" }}>
             <Button onClick={handleCancelModal} style={{ marginRight: 8 }}>
-              Hủy
+              Cancel
             </Button>
-            <Button type="primary" onClick={handleSaveDraft}>
-              Lưu & Tính Nháp
+            <Button type="primary" onClick={handleSaveDraft} loading={loading}>
+              Save & Calculate Draft
             </Button>
           </div>
         </Form>
       </Modal>
+
+      <FeeNoticeDetailModal
+        open={isDetailModalVisible}
+        feeNoticeId={selectedFeeNoticeId}
+        onClose={() => {
+          setIsDetailModalVisible(false);
+          setSelectedFeeNoticeId(null);
+        }}
+      />
     </div>
   );
 };

@@ -85,16 +85,17 @@ const Apartments: React.FC = () => {
           <Button
             type="link"
             size="small"
-            icon={<EyeOutlined />}
+            icon={<EyeOutlined style={{ color: "#000" }} />}
             onClick={() => handleViewDetail(record.id)}
+            style={{ color: "#000" }}
           >
           </Button>
           <Button
             type="link"
             size="small"
-            danger
-            icon={<DeleteOutlined />}
+            icon={<DeleteOutlined style={{ color: "#000" }} />}
             onClick={() => handleDelete(record.id)}
+            style={{ color: "#000" }}
           >
           </Button>
         </Space>

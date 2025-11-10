@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Table, Button, Space, Input, InputNumber, Form, App, Popconfirm } from "antd";
-import { PlusOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Modal, Table, Button, Space, Input, InputNumber, Form, App, Popconfirm, Switch } from "antd";
+import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import type { FeeType, FeeRateConfig } from "../../types/fee";
 import TierDetails from "./TierDetails";
 
@@ -80,6 +80,16 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
     notification.success({ message: "Config deleted successfully" });
   };
 
+  const handleToggleActive = (configId: string, checked: boolean) => {
+    setRateConfigs(
+      rateConfigs.map((config) =>
+        config.id === configId
+          ? { ...config, status: checked ? "ACTIVE" : "INACTIVE" }
+          : config
+      )
+    );
+  };
+
   const handleSave = () => {
     // Ensure only one active config
     const activeConfigs = rateConfigs.filter((c) => c.status === "ACTIVE");
@@ -120,16 +130,22 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
     {
       title: "Actions",
       key: "actions",
-      width: 120,
+      width: 180,
       render: (_: unknown, record: FeeRateConfig) => (
         <Space size="middle">
+          <Switch
+            checked={record.status === "ACTIVE"}
+            onChange={(checked) => handleToggleActive(record.id, checked)}
+            size="small"
+          />
           <Button
             type="text"
             size="small"
-            icon={<EditOutlined style={{ color: "#000" }} />}
             onClick={() => handleEditTiers(record)}
             style={{ color: "#000" }}
-          />
+          >
+            Edit
+          </Button>
           <Popconfirm
             title="Delete config"
             description="Are you sure you want to delete this config?"
@@ -140,9 +156,10 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
             <Button
               type="text"
               size="small"
-              icon={<DeleteOutlined style={{ color: "#000" }} />}
               style={{ color: "#000" }}
-            />
+            >
+              Delete
+            </Button>
           </Popconfirm>
         </Space>
       ),

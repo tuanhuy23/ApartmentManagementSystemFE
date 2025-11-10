@@ -65,6 +65,7 @@ const ApartmentDetail: React.FC = () => {
   const [utilityReadings, setUtilityReadings] = useState<UtilityReading[]>([]);
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [oldReadings, setOldReadings] = useState<Record<string, UtilityReadingDto | null>>({});
+  const [allUtilityReadings, setAllUtilityReadings] = useState<UtilityReadingDto[]>([]);
 
   useEffect(() => {
     if (apartmentId) {
@@ -77,14 +78,23 @@ const ApartmentDetail: React.FC = () => {
   useEffect(() => {
     if (isModalVisible) {
       fetchFeeTypes();
+    } else {
+      setOldReadings({});
     }
   }, [isModalVisible]);
 
   useEffect(() => {
-    if (selectedFees.length > 0 && apartmentId) {
-      fetchOldReadings();
+    if (selectedFees.length > 0 && allUtilityReadings.length > 0) {
+      const readingsMap: Record<string, UtilityReadingDto | null> = {};
+      selectedFees.forEach((feeId) => {
+        const reading = allUtilityReadings.find((r) => r.feeTypeId === feeId);
+        readingsMap[feeId] = reading || null;
+      });
+      setOldReadings(readingsMap);
+    } else {
+      setOldReadings({});
     }
-  }, [selectedFees, apartmentId]);
+  }, [selectedFees, allUtilityReadings]);
 
   const fetchApartmentDetail = async () => {
     if (!apartmentId) return;
@@ -133,6 +143,7 @@ const ApartmentDetail: React.FC = () => {
     try {
       const response = await feeApi.getUtilityReadings(apartmentId);
       if (response.data) {
+        setAllUtilityReadings(response.data);
         const convertedReadings: UtilityReading[] = response.data.map((dto) => ({
           id: dto.id,
           type: dto.feeTypeName === "Electricity" ? "Electricity" : "Water",
@@ -163,23 +174,6 @@ const ApartmentDetail: React.FC = () => {
       }
     } catch {
       notification.error({ message: "Failed to fetch fee types" });
-    }
-  };
-
-  const fetchOldReadings = async () => {
-    if (!apartmentId) return;
-    try {
-      const response = await feeApi.getUtilityReadings(apartmentId);
-      if (response.data) {
-        const readingsMap: Record<string, UtilityReadingDto | null> = {};
-        selectedFees.forEach((feeId) => {
-          const reading = response.data.find((r) => r.feeTypeId === feeId);
-          readingsMap[feeId] = reading || null;
-        });
-        setOldReadings(readingsMap);
-      }
-    } catch {
-      notification.error({ message: "Failed to fetch old readings" });
     }
   };
 
@@ -799,25 +793,6 @@ const ApartmentDetail: React.FC = () => {
                 </React.Fragment>
               );
             }
-
-            if (feeType.type === "QUANTITY") {
-              return (
-                <React.Fragment key={feeId}>
-                  <Divider orientation="left">{feeType.name} Fee (QUANTITY)</Divider>
-                  <Form.Item
-                    label="Adjusted Quantity"
-                    name={[fieldName, "adjustedQuantity"]}
-                  >
-                    <InputNumber
-                      style={{ width: 200 }}
-                      placeholder="Enter quantity"
-                      min={0}
-                    />
-                  </Form.Item>
-                </React.Fragment>
-              );
-            }
-
             return null;
           })}
 

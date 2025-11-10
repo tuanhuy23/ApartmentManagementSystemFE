@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Table, Typography, Tag, Descriptions, Spin, App } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { Modal, Typography, Tag, Descriptions, Spin, App, Card, Space, Divider } from "antd";
 import dayjs from "dayjs";
 import { feeApi } from "../../api/feeApi";
 import { feeConfigurationApi } from "../../api/feeConfigurationApi";
@@ -115,152 +114,87 @@ const FeeNoticeDetailModal: React.FC<FeeNoticeDetailModalProps> = ({
     }
   };
 
-  const feeDetailColumns: ColumnsType<FeeDetailWithName> = [
-    {
-      title: "Fee Type",
-      dataIndex: "feeTypeName",
-      key: "feeTypeName",
-      width: 150,
-    },
-    {
-      title: "Consumption",
-      dataIndex: "consumption",
-      key: "consumption",
-      width: 120,
-      render: (consumption: number | null) => consumption !== null ? consumption.toFixed(2) : "N/A",
-      align: "right",
-    },
-    {
-      title: "Previous Reading",
-      key: "previousReading",
-      width: 150,
-      render: (_: unknown, record: FeeDetailWithName) => (
-        <div>
-          <div>{record.previousReading !== null ? record.previousReading.toFixed(2) : "N/A"}</div>
-          <Text type="secondary" style={{ fontSize: "12px" }}>
-            {formatDate(record.previousReadingDate)}
-          </Text>
-        </div>
-      ),
-      align: "right",
-    },
-    {
-      title: "Current Reading",
-      key: "currentReading",
-      width: 150,
-      render: (_: unknown, record: FeeDetailWithName) => (
-        <div>
-          <div>{record.currentReading !== null ? record.currentReading.toFixed(2) : "N/A"}</div>
-          <Text type="secondary" style={{ fontSize: "12px" }}>
-            {formatDate(record.currentReadingDate)}
-          </Text>
-        </div>
-      ),
-      align: "right",
-    },
-    {
-      title: "Proration",
-      dataIndex: "proration",
-      key: "proration",
-      width: 100,
-      render: (proration: number | null) => proration !== null ? `${(proration * 100).toFixed(2)}%` : "N/A",
-      align: "right",
-    },
-    {
-      title: "Sub Total",
-      dataIndex: "subTotal",
-      key: "subTotal",
-      width: 120,
-      render: (amount: number) => formatCurrency(amount),
-      align: "right",
-    },
-    {
-      title: "Gross Cost",
-      dataIndex: "grossCost",
-      key: "grossCost",
-      width: 120,
-      render: (amount: number) => formatCurrency(amount),
-      align: "right",
-    },
-    {
-      title: "VAT Rate",
-      dataIndex: "vatRate",
-      key: "vatRate",
-      width: 100,
-      render: (rate: number) => `${(rate * 100).toFixed(2)}%`,
-      align: "right",
-    },
-    {
-      title: "VAT Cost",
-      dataIndex: "vatCost",
-      key: "vatCost",
-      width: 120,
-      render: (amount: number) => formatCurrency(amount),
-      align: "right",
-    },
-  ];
-
-  const expandedRowRender = (record: FeeDetailWithName) => {
-    if (!record.feeTierDetails || record.feeTierDetails.length === 0) {
-      return null;
-    }
-
-    const tierColumns: ColumnsType<typeof record.feeTierDetails[0]> = [
-      {
-        title: "Tier Order",
-        dataIndex: "tierOrder",
-        key: "tierOrder",
-        width: 100,
-        align: "center",
-      },
-      {
-        title: "Consumption Range",
-        key: "range",
-        width: 200,
-        render: (_: unknown, tier: typeof record.feeTierDetails[0]) => (
-          <Text>
-            {tier.consumptionStart.toFixed(2)} - {tier.consumptionEnd.toFixed(2)} {tier.unitName}
-          </Text>
-        ),
-      },
-      {
-        title: "Original Range",
-        key: "originalRange",
-        width: 200,
-        render: (_: unknown, tier: typeof record.feeTierDetails[0]) => (
-          <Text type="secondary">
-            {tier.consumptionStartOriginal.toFixed(2)} - {tier.consumptionEndOriginal.toFixed(2)} {tier.unitName}
-          </Text>
-        ),
-      },
-      {
-        title: "Unit Rate",
-        dataIndex: "unitRate",
-        key: "unitRate",
-        width: 120,
-        render: (rate: number, tier: typeof record.feeTierDetails[0]) => 
-          formatCurrency(rate) + ` / ${tier.unitName}`,
-        align: "right",
-      },
-      {
-        title: "Consumption",
-        dataIndex: "consumption",
-        key: "consumption",
-        width: 120,
-        render: (consumption: number, tier: typeof record.feeTierDetails[0]) => 
-          `${consumption.toFixed(2)} ${tier.unitName}`,
-        align: "right",
-      },
-    ];
-
+  const renderFeeDetailCard = (detail: FeeDetailWithName) => {
     return (
-      <Table
-        columns={tierColumns}
-        dataSource={record.feeTierDetails}
-        rowKey="tierOrder"
-        pagination={false}
-        size="small"
-      />
+      <Card
+        key={detail.feeTypeId}
+        title={detail.feeTypeName}
+        style={{ marginBottom: 16 }}
+      >
+        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+          <Descriptions column={2} size="small">
+            <Descriptions.Item label="Consumption">
+              {detail.consumption !== null ? detail.consumption.toFixed(2) : "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Proration">
+              {detail.proration !== null ? `${(detail.proration * 100).toFixed(2)}%` : "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Previous Reading">
+              <div>
+                <div>{detail.previousReading !== null ? detail.previousReading.toFixed(2) : "N/A"}</div>
+                <Text type="secondary" style={{ fontSize: "12px" }}>
+                  {formatDate(detail.previousReadingDate)}
+                </Text>
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="Current Reading">
+              <div>
+                <div>{detail.currentReading !== null ? detail.currentReading.toFixed(2) : "N/A"}</div>
+                <Text type="secondary" style={{ fontSize: "12px" }}>
+                  {formatDate(detail.currentReadingDate)}
+                </Text>
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="Gross Cost">
+              {formatCurrency(detail.grossCost)}
+            </Descriptions.Item>
+            <Descriptions.Item label="VAT Rate">
+              {(detail.vatRate * 100).toFixed(2)}%
+            </Descriptions.Item>
+            <Descriptions.Item label="VAT Cost">
+              {formatCurrency(detail.vatCost)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Sub Total">
+              <Text strong style={{ fontSize: "14px", color: "#1890ff" }}>
+                {formatCurrency(detail.subTotal)}
+              </Text>
+            </Descriptions.Item>
+          </Descriptions>
+
+          {detail.feeTierDetails && detail.feeTierDetails.length > 0 && (
+            <>
+              <Divider orientation="left" style={{ margin: "16px 0" }}>
+                Tiered Rate Details
+              </Divider>
+              <Space direction="vertical" size="small" style={{ width: "100%" }}>
+                {detail.feeTierDetails.map((tier) => (
+                  <Card key={tier.tierOrder} size="small" style={{ backgroundColor: "#fafafa" }}>
+                    <Descriptions column={2} size="small">
+                      <Descriptions.Item label="Tier Order">
+                        {tier.tierOrder}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Consumption">
+                        {tier.consumption.toFixed(2)} {tier.unitName}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Consumption Range">
+                        {tier.consumptionStart.toFixed(2)} - {tier.consumptionEnd.toFixed(2)} {tier.unitName}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Original Range">
+                        <Text type="secondary">
+                          {tier.consumptionStartOriginal.toFixed(2)} - {tier.consumptionEndOriginal.toFixed(2)} {tier.unitName}
+                        </Text>
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Unit Rate">
+                        {formatCurrency(tier.unitRate)} / {tier.unitName}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  </Card>
+                ))}
+              </Space>
+            </>
+          )}
+        </Space>
+      </Card>
     );
   };
 
@@ -308,17 +242,9 @@ const FeeNoticeDetailModal: React.FC<FeeNoticeDetailModalProps> = ({
               Fee Details
             </Title>
 
-            <Table
-              columns={feeDetailColumns}
-              dataSource={feeDetails}
-              rowKey="feeTypeId"
-              pagination={false}
-              scroll={{ x: 1200 }}
-              expandable={{
-                expandedRowRender,
-                rowExpandable: (record) => !!(record.feeTierDetails && record.feeTierDetails.length > 0),
-              }}
-            />
+            <div>
+              {feeDetails.map((detail) => renderFeeDetailCard(detail))}
+            </div>
           </>
         )}
       </Spin>

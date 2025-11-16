@@ -22,7 +22,7 @@ export const accountApi = {
     axiosClient.post("/account/login", credentials),
   
   refreshToken: (refreshToken: RefreshTokenRequestDto): Promise<ApiResponse<TokenResponseDto>> => 
-    axiosClient.post("/account/refresh-token", { refreshToken }),
+    axiosClient.post("/account/refresh-token", refreshToken),
   
   logout: (refreshToken: string): Promise<ApiResponse<TokenResponseDto>> => 
     axiosClient.post("/account/logout", { refreshToken }),

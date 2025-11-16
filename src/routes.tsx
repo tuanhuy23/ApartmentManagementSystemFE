@@ -12,6 +12,11 @@ import Apartments from "./pages/Apartment/Apartments";
 import ApartmentForm from "./pages/Apartment/ApartmentForm";
 import FeeConfiguration from "./pages/FeeConfiguration/FeeConfiguration";
 import BillingCycleSetting from "./pages/BillingCycle/BillingCycleSetting";
+import Announcements from "./pages/Announcement/Announcements";
+import AnnouncementForm from "./pages/Announcement/AnnouncementForm";
+import Requests from "./pages/Request/Requests";
+import RequestForm from "./pages/Request/RequestForm";
+import RequestDetail from "./pages/Request/RequestDetail";
 import Forbidden403 from "./pages/Error/Forbidden403";
 import NotFound404 from "./pages/Error/NotFound404";
 import AuthGuard from "./components/AuthGuard";
@@ -113,6 +118,41 @@ export default function AppRoutes() {
         <AuthGuard>
           <ApartmentBuildingGuard>
             <BillingCycleSetting />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/announcements" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <Announcements />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/announcements/create" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <AnnouncementForm />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/requests" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <Requests />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/requests/create" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <RequestForm />
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/requests/:id" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <RequestDetail />
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />

@@ -13,10 +13,10 @@ export const feeConfigurationApi = {
   getById: (id: string): Promise<ApiResponse<FeeTypeDto>> =>
     axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/fee-configuration/${id}`),
 
-  create: (data: CreateOrUpdateFeeTypeDto): Promise<ApiResponse<FeeTypeDto>> =>
+  create: (data: CreateOrUpdateFeeTypeDto): Promise<ApiResponse<void>> =>
     axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/fee-configuration`, data),
 
-  update: (data: CreateOrUpdateFeeTypeDto): Promise<ApiResponse<FeeTypeDto>> =>
+  update: (data: CreateOrUpdateFeeTypeDto): Promise<ApiResponse<void>> =>
     axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/fee-configuration`, data),
 };
 

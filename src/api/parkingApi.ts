@@ -14,7 +14,7 @@ export const parkingApi = {
     );
   },
 
-  create: (data: ParkingRegistrationDto): Promise<ApiResponse<ParkingRegistrationDto>> =>
+  create: (data: ParkingRegistrationDto): Promise<ApiResponse<void>> =>
     axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/parking-registration`, data),
 };
 

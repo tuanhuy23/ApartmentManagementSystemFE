@@ -7,7 +7,7 @@ export const billingCycleApi = {
   get: (): Promise<ApiResponse<BillingCycleSettingDto>> =>
     axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/billing-cycle-setting`),
 
-  create: (data: BillingCycleSettingDto): Promise<ApiResponse<BillingCycleSettingDto>> =>
+  create: (data: BillingCycleSettingDto): Promise<ApiResponse<void>> =>
     axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/billing-cycle-setting`, data),
 };
 

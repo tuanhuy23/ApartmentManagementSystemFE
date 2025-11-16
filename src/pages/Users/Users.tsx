@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, Space, App } from "antd";
-import { PlusOutlined, UserOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Table, Typography, Button, Space, App, Breadcrumb } from "antd";
+import { PlusOutlined, UserOutlined, EditOutlined, DeleteOutlined, HomeOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { userApi } from "../../api/userApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
@@ -121,6 +121,23 @@ const Users: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
+      <Breadcrumb
+        style={{ marginBottom: 16 }}
+        items={[
+          {
+            href: `/${apartmentBuildingId}`,
+            title: (
+              <>
+                <HomeOutlined />
+                <span>Dashboard</span>
+              </>
+            ),
+          },
+          {
+            title: "Users",
+          },
+        ]}
+      />
       <div style={{ 
         display: "flex", 
         justifyContent: "space-between", 

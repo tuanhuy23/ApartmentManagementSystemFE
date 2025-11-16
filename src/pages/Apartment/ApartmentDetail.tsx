@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import {
   Card,
@@ -18,6 +18,7 @@ import {
   Col,
   Select,
   App,
+  Tabs,
 } from "antd";
 import type { FilterDropdownProps } from "antd/es/table/interface";
 import {
@@ -42,6 +43,7 @@ import type {
   UtilityReadingDto,
 } from "../../types/apartment";
 import FeeNoticeDetailModal from "./FeeNoticeDetailModal";
+import ResidentsTab from "./ResidentsTab";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -66,37 +68,30 @@ const ApartmentDetail: React.FC = () => {
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [oldReadings, setOldReadings] = useState<Record<string, UtilityReadingDto | null>>({});
   const [allUtilityReadings, setAllUtilityReadings] = useState<UtilityReadingDto[]>([]);
+  const fetchedApartmentIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (apartmentId) {
-      fetchApartmentDetail();
-      fetchFeeNotices();
-      fetchUtilityReadings();
+  const fetchUtilityReadings = useCallback(async () => {
+    if (!apartmentId) return;
+    try {
+      const response = await feeApi.getUtilityReadings(apartmentId);
+      if (response.data) {
+        setAllUtilityReadings(response.data);
+        const convertedReadings: UtilityReading[] = response.data.map((dto) => ({
+          id: dto.id,
+          type: dto.feeTypeName === "Electricity" ? "Electricity" : "Water",
+          readingDate: dto.readingDate,
+          readingValue: dto.currentReading,
+          consumption: 0,
+          unit: dto.feeTypeName === "Electricity" ? "kWh" : "m³",
+        }));
+        setUtilityReadings(convertedReadings);
+      }
+    } catch {
+      notification.error({ message: "Failed to fetch utility readings" });
     }
-  }, [apartmentId]);
+  }, [apartmentId, notification]);
 
-  useEffect(() => {
-    if (isModalVisible) {
-      fetchFeeTypes();
-    } else {
-      setOldReadings({});
-    }
-  }, [isModalVisible]);
-
-  useEffect(() => {
-    if (selectedFees.length > 0 && allUtilityReadings.length > 0) {
-      const readingsMap: Record<string, UtilityReadingDto | null> = {};
-      selectedFees.forEach((feeId) => {
-        const reading = allUtilityReadings.find((r) => r.feeTypeId === feeId);
-        readingsMap[feeId] = reading || null;
-      });
-      setOldReadings(readingsMap);
-    } else {
-      setOldReadings({});
-    }
-  }, [selectedFees, allUtilityReadings]);
-
-  const fetchApartmentDetail = async () => {
+  const fetchApartmentDetail = useCallback(async () => {
     if (!apartmentId) return;
     try {
       setLoading(true);
@@ -114,9 +109,9 @@ const ApartmentDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apartmentId, apartmentForm, notification]);
 
-  const fetchFeeNotices = async () => {
+  const fetchFeeNotices = useCallback(async () => {
     if (!apartmentId) return;
     try {
       setLoading(true);
@@ -136,30 +131,18 @@ const ApartmentDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apartmentId, notification]);
 
-  const fetchUtilityReadings = async () => {
-    if (!apartmentId) return;
-    try {
-      const response = await feeApi.getUtilityReadings(apartmentId);
-      if (response.data) {
-        setAllUtilityReadings(response.data);
-        const convertedReadings: UtilityReading[] = response.data.map((dto) => ({
-          id: dto.id,
-          type: dto.feeTypeName === "Electricity" ? "Electricity" : "Water",
-          readingDate: dto.readingDate,
-          readingValue: dto.currentReading,
-          consumption: 0,
-          unit: dto.feeTypeName === "Electricity" ? "kWh" : "m³",
-        }));
-        setUtilityReadings(convertedReadings);
-      }
-    } catch {
-      notification.error({ message: "Failed to fetch utility readings" });
+  useEffect(() => {
+    if (apartmentId && fetchedApartmentIdRef.current !== apartmentId) {
+      fetchedApartmentIdRef.current = apartmentId;
+      fetchApartmentDetail();
+      fetchFeeNotices();
+      fetchUtilityReadings();
     }
-  };
+  }, [apartmentId, fetchApartmentDetail, fetchFeeNotices, fetchUtilityReadings]);
 
-  const fetchFeeTypes = async () => {
+  const fetchFeeTypes = useCallback(async () => {
     try {
       const response = await feeConfigurationApi.getAll();
       if (response.data) {
@@ -175,7 +158,28 @@ const ApartmentDetail: React.FC = () => {
     } catch {
       notification.error({ message: "Failed to fetch fee types" });
     }
-  };
+  }, [notification]);
+
+  useEffect(() => {
+    if (isModalVisible) {
+      fetchFeeTypes();
+    } else {
+      setOldReadings({});
+    }
+  }, [isModalVisible, fetchFeeTypes]);
+
+  useEffect(() => {
+    if (selectedFees.length > 0 && allUtilityReadings.length > 0) {
+      const readingsMap: Record<string, UtilityReadingDto | null> = {};
+      selectedFees.forEach((feeId) => {
+        const reading = allUtilityReadings.find((r) => r.feeTypeId === feeId);
+        readingsMap[feeId] = reading || null;
+      });
+      setOldReadings(readingsMap);
+    } else {
+      setOldReadings({});
+    }
+  }, [selectedFees, allUtilityReadings]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -387,42 +391,10 @@ const ApartmentDetail: React.FC = () => {
     );
   });
 
-  const handleUpdateApartment = async () => {
-    try {
-      await apartmentForm.validateFields();
-      if (!apartmentId || !apartmentData) return;
-      
-      const values = apartmentForm.getFieldsValue();
-      const updateData = {
-        apartmentBuildingId: apartmentData.apartmentBuildingId,
-        name: values.name,
-        area: values.area,
-        floor: values.floor,
-      };
-      
-      setLoading(true);
-      await apartmentApi.update(apartmentId, updateData);
-      notification.success({ message: "Apartment updated successfully!" });
-      fetchApartmentDetail();
-    } catch (error: any) {
-      if (error?.errorFields) {
-        notification.error({ message: "Please check your input" });
-      } else {
-        notification.error({ message: "Failed to update apartment" });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleCreateInvoice = async () => {
     setIsModalVisible(true);
     form.resetFields();
     setSelectedFees([]);
-    
-    if (apartmentId) {
-      await fetchUtilityReadings();
-    }
   };
 
   const handleSaveDraft = async () => {
@@ -532,11 +504,6 @@ const ApartmentDetail: React.FC = () => {
       <Card
         title="Basic Information"
         style={{ marginBottom: 24 }}
-        extra={
-          <Button type="primary" onClick={handleUpdateApartment} loading={loading}>
-            Update
-          </Button>
-        }
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
           This area displays foundational data used for AREA and QUANTITY calculations, and determines the building that applies the price configuration.
@@ -580,52 +547,92 @@ const ApartmentDetail: React.FC = () => {
         </Form>
       </Card>
 
-      <Card title="PART B: Invoice Management & Issuance (Fee Notice Management)">
-        <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-          This is the main operational area. Manager starts the fee calculation flow here and views historical results.
-        </Text>
+      <Card>
+        <Tabs
+          defaultActiveKey="1"
+          items={[
+            {
+              key: "1",
+              label: "Fee Notice",
+              children: (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <Title level={4}>1. Create Invoice Action</Title>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={handleCreateInvoice}
+                      size="large"
+                    >
+                      Create New Invoice
+                    </Button>
+                  </div>
 
-        <div style={{ marginBottom: 16 }}>
-          <Title level={4}>1. Create Invoice Action</Title>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreateInvoice}
-            size="large"
-          >
-            Create New Invoice
-          </Button>
-          <Text type="secondary" style={{ marginLeft: 16 }}>
-            → Activates Data Entry Form Modal (See Part C)
-          </Text>
-        </div>
+                  <Divider />
 
-        <Divider />
+                  <div style={{ marginBottom: 16 }}>
+                    <Title level={4}>2. Invoice History (Fee Notice History)</Title>
+                  </div>
 
-        <div style={{ marginBottom: 16 }}>
-          <Title level={4}>2. Invoice History (Fee Notice History)</Title>
-        </div>
+                  <Input.Search
+                    placeholder="Search in table..."
+                    allowClear
+                    style={{ marginBottom: 16, maxWidth: 400 }}
+                    onSearch={(value) => setFeeNoticeSearchText(value)}
+                    onChange={(e) => {
+                      if (!e.target.value) setFeeNoticeSearchText("");
+                    }}
+                  />
 
-        <Input.Search
-          placeholder="Search in table..."
-          allowClear
-          style={{ marginBottom: 16, maxWidth: 400 }}
-          onSearch={(value) => setFeeNoticeSearchText(value)}
-          onChange={(e) => {
-            if (!e.target.value) setFeeNoticeSearchText("");
-          }}
-        />
+                  <Table
+                    columns={feeNoticeColumns}
+                    dataSource={filteredFeeNotices}
+                    rowKey="id"
+                    pagination={{
+                      pageSize: 5,
+                      showSizeChanger: false,
+                      showTotal: (total, range) =>
+                        `${range[0]}-${range[1]} of ${total} items`,
+                    }}
+                  />
+                </div>
+              ),
+            },
+            {
+              key: "2",
+              label: "Utility Reading History",
+              children: (
+                <div>
+                  <Input.Search
+                    placeholder="Search in table..."
+                    allowClear
+                    style={{ marginBottom: 16, maxWidth: 400 }}
+                    onSearch={(value) => setUtilityReadingSearchText(value)}
+                    onChange={(e) => {
+                      if (!e.target.value) setUtilityReadingSearchText("");
+                    }}
+                  />
 
-        <Table
-          columns={feeNoticeColumns}
-          dataSource={filteredFeeNotices}
-          rowKey="id"
-          pagination={{
-            pageSize: 5,
-            showSizeChanger: false,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} of ${total} items`,
-          }}
+                  <Table
+                    columns={utilityReadingColumns}
+                    dataSource={filteredUtilityReadings}
+                    rowKey="id"
+                    pagination={{
+                      pageSize: 5,
+                      showSizeChanger: false,
+                      showTotal: (total, range) =>
+                        `${range[0]}-${range[1]} of ${total} items`,
+                    }}
+                  />
+                </div>
+              ),
+            },
+            {
+              key: "3",
+              label: "Residents",
+              children: apartmentId ? <ResidentsTab apartmentId={apartmentId} /> : null,
+            },
+          ]}
         />
       </Card>
 

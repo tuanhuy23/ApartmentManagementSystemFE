@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Form, InputNumber, Button, Typography, Card, Space, App } from "antd";
-import { SaveOutlined, CalendarOutlined } from "@ant-design/icons";
+import { Form, InputNumber, Button, Typography, Card, Space, App, Breadcrumb } from "antd";
+import { SaveOutlined, CalendarOutlined, HomeOutlined } from "@ant-design/icons";
 import { billingCycleApi } from "../../api/billingCycleApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import type { BillingCycleSettingDto } from "../../types/billingCycle";
@@ -67,6 +67,23 @@ const BillingCycleSetting: React.FC = () => {
 
   return (
     <div style={{ padding: 24, maxWidth: 600 }}>
+      <Breadcrumb
+        style={{ marginBottom: 16 }}
+        items={[
+          {
+            href: `/${apartmentBuildingId}`,
+            title: (
+              <>
+                <HomeOutlined />
+                <span>Dashboard</span>
+              </>
+            ),
+          },
+          {
+            title: "Billing Cycle",
+          },
+        ]}
+      />
       <Title level={2}>
         <CalendarOutlined /> Billing Cycle Settings
       </Title>

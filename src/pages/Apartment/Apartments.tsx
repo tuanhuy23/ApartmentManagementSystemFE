@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, Space, App } from "antd";
+import { Table, Typography, Button, Space, App, Breadcrumb } from "antd";
 import { PlusOutlined, HomeOutlined, EyeOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { apartmentApi } from "../../api/apartmentApi";
@@ -51,6 +51,8 @@ const Apartments: React.FC = () => {
       cancelText: "Cancel",
       onOk: async () => {
         try {
+          // TODO: Implement delete functionality when API is available
+          // await apartmentApi.delete(apartmentId);
           notification.error({ message: "Delete functionality not available in API" });
         } catch {
           notification.error({ message: "Failed to delete apartment" });
@@ -105,6 +107,23 @@ const Apartments: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
+      <Breadcrumb
+        style={{ marginBottom: 16 }}
+        items={[
+          {
+            href: `/${apartmentBuildingId}`,
+            title: (
+              <>
+                <HomeOutlined />
+                <span>Dashboard</span>
+              </>
+            ),
+          },
+          {
+            title: "Apartments",
+          },
+        ]}
+      />
       <div
         style={{
           display: "flex",

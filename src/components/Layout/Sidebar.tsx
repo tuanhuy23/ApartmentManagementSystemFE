@@ -7,6 +7,8 @@ import {
   DollarOutlined,
   ApartmentOutlined,
   CalendarOutlined,
+  NotificationOutlined,
+  QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
@@ -62,6 +64,16 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       key: getPathWithApartmentId("/billing-cycle"),
       icon: <CalendarOutlined />,
       label: "Billing Cycle",
+    },
+    {
+      key: getPathWithApartmentId("/announcements"),
+      icon: <NotificationOutlined />,
+      label: "Announcements",
+    },
+    {
+      key: getPathWithApartmentId("/requests"),
+      icon: <QuestionCircleOutlined />,
+      label: "Requests",
     },
   ];
 

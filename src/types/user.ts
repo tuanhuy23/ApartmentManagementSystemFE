@@ -19,6 +19,7 @@ export interface CreateOrUpdateUserRequestDto {
     phoneNumber: string;
     appartmentBuildingId: string;
     password: string;
+    apartmentId: string;
 }
 
 export interface DeleteUserResponseDto {
@@ -44,6 +45,7 @@ export interface AccountInfoResponseDto {
     displayName: string;
     userName: string;
     role: string;
+    roleName: string;
     apartmentBuildingId: string;
     permissions: string[];
 }

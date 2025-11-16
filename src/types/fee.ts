@@ -8,8 +8,9 @@ export interface FeeTypeDto {
   isVATApplicable: boolean;
   isActive: boolean;
   defaultRate: number;
+  defaultVATRate: number;
   feeRateConfigs: FeeRateConfigDto[];
-  quantityRateConfigs?: CreateOrUpdateQuantityRateConfigDto[];
+  quantityRateConfigs: QuantityRateConfigDto[];
 }
 
 export interface FeeRateConfigDto {
@@ -19,6 +20,7 @@ export interface FeeRateConfigDto {
   vatRate: number;
   isActive: boolean;
   name: string;
+  unitName: string;
   feeTiers: FeeTierDto[];
 }
 
@@ -60,6 +62,15 @@ export interface CreateOrUpdateFeeRateTierDto {
   consumptionEnd: number;
   unitRate: number;
   unitName: string;
+}
+
+export interface QuantityRateConfigDto {
+  id: string;
+  apartmentBuildingId: string;
+  feeTypeId: string;
+  isActive: boolean;
+  itemType: string;
+  unitRate: number;
 }
 
 export interface CreateOrUpdateQuantityRateConfigDto {

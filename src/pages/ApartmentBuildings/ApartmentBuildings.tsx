@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, Space, Tag, App } from "antd";
+import { Table, Typography, Button, Space, Tag, App, Breadcrumb } from "antd";
 import { PlusOutlined, HomeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { apartmentBuildingApi } from "../../api/apartmentBuildingApi";
@@ -128,6 +128,23 @@ const ApartmentBuildings: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
+      <Breadcrumb
+        style={{ marginBottom: 16 }}
+        items={[
+          {
+            href: `/${apartmentBuildingId}`,
+            title: (
+              <>
+                <HomeOutlined />
+                <span>Dashboard</span>
+              </>
+            ),
+          },
+          {
+            title: "Apartment Buildings",
+          },
+        ]}
+      />
       <div style={{ 
         display: "flex", 
         justifyContent: "space-between", 

@@ -14,13 +14,13 @@ export const feeApi = {
   getById: (id: string): Promise<ApiResponse<FeeNoticeDto>> =>
     axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/fee?id=${id}`),
 
-  create: (data: CreateOrUpdateFeeNoticeDto): Promise<ApiResponse<FeeNoticeDto>> =>
+  create: (data: CreateOrUpdateFeeNoticeDto): Promise<ApiResponse<void>> =>
     axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/fee`, data),
 
-  update: (data: CreateOrUpdateFeeNoticeDto): Promise<ApiResponse<FeeNoticeDto>> =>
+  update: (data: CreateOrUpdateFeeNoticeDto): Promise<ApiResponse<void>> =>
     axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/fee`, data),
 
   getUtilityReadings: (apartmentId: string): Promise<ApiResponse<UtilityReadingDto[]>> =>
-    axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/Fee/utility-reading/${apartmentId}`),
+    axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/fee/utility-reading/${apartmentId}`),
 };
 

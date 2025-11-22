@@ -50,9 +50,10 @@ const { Option } = Select;
 
 const ApartmentDetail: React.FC = () => {
   const { apartmentId } = useParams<{ apartmentId: string }>();
-  const { modal, notification } = App.useApp();
+  const { notification } = App.useApp();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [isConfirmDrawerVisible, setIsConfirmDrawerVisible] = useState(false);
   const [selectedFeeNoticeId, setSelectedFeeNoticeId] = useState<string | null>(null);
   const [form] = Form.useForm<InvoiceFormData>();
   const [apartmentForm] = Form.useForm();
@@ -482,16 +483,17 @@ const ApartmentDetail: React.FC = () => {
       e.stopPropagation();
     }
     
-    modal.confirm({
-      title: "Confirm Cancel",
-      content: "Are you sure you want to cancel? All changes will be lost.",
-      okText: "Confirm",
-      cancelText: "Cancel",
-      onOk: () => {
-        setIsModalVisible(false);
-        form.resetFields();
-      },
-    });
+    setIsConfirmDrawerVisible(true);
+  };
+
+  const handleConfirmCancel = () => {
+    setIsModalVisible(false);
+    setIsConfirmDrawerVisible(false);
+    form.resetFields();
+  };
+
+  const handleCancelConfirm = () => {
+    setIsConfirmDrawerVisible(false);
   };
 
 
@@ -845,6 +847,36 @@ const ApartmentDetail: React.FC = () => {
           setSelectedFeeNoticeId(null);
         }}
       />
+
+      <Drawer
+        title="Confirm Cancel"
+        open={isConfirmDrawerVisible}
+        onClose={handleCancelConfirm}
+        width={600}
+        placement="right"
+        maskClosable={false}
+        closable={false}
+        extra={
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={handleCancelConfirm}
+            style={{ padding: 0 }}
+          />
+        }
+      >
+        <div style={{ marginBottom: 24 }}>
+          <Text>Are you sure you want to cancel? All changes will be lost.</Text>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <Button onClick={handleCancelConfirm} style={{ marginRight: 8 }}>
+            Cancel
+          </Button>
+          <Button type="primary" onClick={handleConfirmCancel}>
+            Confirm
+          </Button>
+        </div>
+      </Drawer>
     </div>
   );
 };

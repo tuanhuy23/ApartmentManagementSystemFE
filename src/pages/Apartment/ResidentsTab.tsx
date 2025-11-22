@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Table, Button, Space, Tag, Modal, Form, Input, DatePicker, Select, App } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Table, Button, Space, Tag, Modal, Drawer, Form, Input, DatePicker, Select, App, Typography } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { apartmentApi } from "../../api/apartmentApi";
 import type { ResidentDto } from "../../types/resident";
@@ -8,6 +8,7 @@ import { getApartmentBuildingIdFromToken } from "../../utils/token";
 import dayjs from "dayjs";
 
 const { Option } = Select;
+const { Text } = Typography;
 
 interface ResidentsTabProps {
   apartmentId: string;
@@ -20,6 +21,7 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
   const [submitting, setSubmitting] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [isConfirmDrawerVisible, setIsConfirmDrawerVisible] = useState(false);
   const [selectedResident, setSelectedResident] = useState<ResidentDto | null>(null);
   const [form] = Form.useForm<ResidentDto>();
   const fetchedApartmentIdRef = useRef<string | null>(null);
@@ -128,6 +130,25 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
     }
   };
 
+  const handleCancelResident = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    setIsConfirmDrawerVisible(true);
+  };
+
+  const handleConfirmCancel = () => {
+    setIsModalVisible(false);
+    setIsConfirmDrawerVisible(false);
+    form.resetFields();
+  };
+
+  const handleCancelConfirm = () => {
+    setIsConfirmDrawerVisible(false);
+  };
+
   const columns: ColumnsType<ResidentDto> = [
     {
       title: "Name",
@@ -202,18 +223,35 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
         }}
       />
 
-      <Modal
+      <Drawer
         title={selectedResident ? "Edit Resident" : "Add Resident"}
         open={isModalVisible}
-        onOk={handleSubmit}
-        onCancel={() => {
-          setIsModalVisible(false);
-          form.resetFields();
-        }}
+        onClose={handleCancelResident}
         width={600}
+        placement="right"
         maskClosable={false}
-        keyboard={false}
-        confirmLoading={submitting}
+        closable={false}
+        extra={
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={handleCancelResident}
+            style={{ padding: 0 }}
+          />
+        }
+        footer={
+          <div style={{ textAlign: "right" }}>
+            <Button
+              onClick={handleCancelResident}
+              style={{ marginRight: 8 }}
+            >
+              Cancel
+            </Button>
+            <Button type="primary" onClick={handleSubmit} loading={submitting}>
+              {selectedResident ? "Update" : "Create"}
+            </Button>
+          </div>
+        }
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -288,7 +326,7 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
             </>
           )}
         </Form>
-      </Modal>
+      </Drawer>
 
       <Modal
         title="Resident Details"
@@ -316,6 +354,36 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
           </div>
         )}
       </Modal>
+
+      <Drawer
+        title="Confirm Cancel"
+        open={isConfirmDrawerVisible}
+        onClose={handleCancelConfirm}
+        width={600}
+        placement="right"
+        maskClosable={false}
+        closable={false}
+        extra={
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={handleCancelConfirm}
+            style={{ padding: 0 }}
+          />
+        }
+      >
+        <div style={{ marginBottom: 24 }}>
+          <Text>Are you sure you want to cancel? All changes will be lost.</Text>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <Button onClick={handleCancelConfirm} style={{ marginRight: 8 }}>
+            Cancel
+          </Button>
+          <Button type="primary" onClick={handleConfirmCancel}>
+            Confirm
+          </Button>
+        </div>
+      </Drawer>
     </>
   );
 };

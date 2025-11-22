@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Form, Input, Select, InputNumber, Button, Space, App, Switch } from "antd";
+import { Drawer, Form, Input, Select, InputNumber, Button, Space, App, Switch } from "antd";
+import { CloseOutlined } from "@ant-design/icons";
 import type { FeeType, CalculationType } from "../../types/fee";
 import QuantityRateConfig from "./QuantityRateConfig";
 import TieredRateConfig from "./TieredRateConfig";
@@ -114,12 +115,29 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
 
   return (
     <>
-      <Modal
-        title={feeType ? "Edit Fee Type Detail" : "Create Fee Type Detail"}
+      <Drawer
+        title={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>{feeType ? "Edit Fee Type Detail" : "Create Fee Type Detail"}</span>
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              onClick={onCancel}
+            />
+          </div>
+        }
+        placement="right"
+        onClose={onCancel}
         open={open}
-        onCancel={onCancel}
-        footer={null}
         width={600}
+        closable={false}
+        maskClosable={false}
+        zIndex={1000}
+        styles={{ 
+          body: { transition: "transform 0.3s cubic-bezier(0.23, 1, 0.32, 1)" },
+          mask: { zIndex: 999 },
+          wrapper: { transform: "translateX(0) !important" as any }
+        }}
       >
         <Form
           form={form}
@@ -299,7 +317,7 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </Drawer>
     </>
   );
 };

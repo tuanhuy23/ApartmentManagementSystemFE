@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Modal, Table, Button, InputNumber, Space } from "antd";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Drawer, Table, Button, InputNumber, Space } from "antd";
+import { PlusOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
 import type { FeeRateConfig, FeeTier } from "../../types/fee";
 
 interface TierDetailsProps {
@@ -141,12 +141,28 @@ const TierDetails: React.FC<TierDetailsProps> = ({
   ];
 
   return (
-    <Modal
-      title={`Tier Details: ${rateConfig.configName}`}
+    <Drawer
+      title={
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>Tier Details: {rateConfig.configName}</span>
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={onCancel}
+          />
+        </div>
+      }
+      placement="right"
+      onClose={onCancel}
       open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={900}
+      width={600}
+      closable={false}
+      maskClosable={false}
+      zIndex={1000}
+      styles={{ 
+        body: { transition: "transform 0.3s cubic-bezier(0.23, 1, 0.32, 1)" },
+        mask: { zIndex: 999 }
+      }}
     >
       <div style={{ marginBottom: 16 }}>
         <div style={{ marginBottom: 8 }}>
@@ -191,7 +207,7 @@ const TierDetails: React.FC<TierDetailsProps> = ({
           </Button>
         </Space>
       </div>
-    </Modal>
+    </Drawer>
   );
 };
 

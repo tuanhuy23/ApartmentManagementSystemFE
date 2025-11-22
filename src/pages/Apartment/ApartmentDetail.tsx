@@ -6,7 +6,7 @@ import {
   Button,
   Table,
   Tag,
-  Modal,
+  Drawer,
   Form,
   InputNumber,
   DatePicker,
@@ -476,7 +476,7 @@ const ApartmentDetail: React.FC = () => {
     }
   };
 
-  const handleCancelModal = (e?: React.MouseEvent) => {
+  const handleCancelModal = (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -636,31 +636,21 @@ const ApartmentDetail: React.FC = () => {
         />
       </Card>
 
-      <Modal
+      <Drawer
         title="Create Invoice Form Modal"
         open={isModalVisible}
-        onCancel={() => {}}
-        footer={null}
-        width={900}
-        centered
+        onClose={handleCancelModal}
+        width={600}
+        placement="right"
         maskClosable={false}
-        closeIcon={
-          <span
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleCancelModal(e);
-            }}
-            style={{
-              cursor: "pointer",
-              fontSize: "16px",
-              color: "rgba(0, 0, 0, 0.45)",
-              display: "inline-flex",
-              alignItems: "center",
-            }}
-          >
-            <CloseOutlined />
-          </span>
+        closable={false}
+        extra={
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={handleCancelModal}
+            style={{ padding: 0 }}
+          />
         }
       >
         <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -845,7 +835,7 @@ const ApartmentDetail: React.FC = () => {
             </Button>
           </div>
         </Form>
-      </Modal>
+      </Drawer>
 
       <FeeNoticeDetailModal
         open={isDetailModalVisible}

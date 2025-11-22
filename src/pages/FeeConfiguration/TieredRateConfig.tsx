@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Table, Button, Space, Input, InputNumber, Form, App, Popconfirm, Switch } from "antd";
-import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { Drawer, Table, Button, Space, Input, InputNumber, Form, App, Popconfirm, Switch } from "antd";
+import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, CloseOutlined } from "@ant-design/icons";
 import type { FeeType, FeeRateConfig } from "../../types/fee";
 import TierDetails from "./TierDetails";
 
@@ -168,12 +168,29 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
 
   return (
     <>
-      <Modal
-        title={`Rate Management: ${feeType.feeName} (TIERED)`}
+      <Drawer
+        title={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Rate Management: {feeType.feeName} (TIERED)</span>
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              onClick={onCancel}
+            />
+          </div>
+        }
+        placement="right"
+        onClose={onCancel}
         open={open}
-        onCancel={onCancel}
-        footer={null}
-        width={900}
+        width={600}
+        closable={false}
+        maskClosable={false}
+        zIndex={1000}
+        styles={{ 
+          body: { transition: "transform 0.3s cubic-bezier(0.23, 1, 0.32, 1)" },
+          mask: { zIndex: 999 },
+          wrapper: { transform: "translateX(0) !important" as any }
+        }}
       >
         <div style={{ marginBottom: 16 }}>
           <div>
@@ -206,18 +223,38 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
             </Button>
           </Space>
         </div>
-      </Modal>
+      </Drawer>
 
-      {/* Create New Config Modal */}
-      <Modal
-        title="Create New Rate Config"
-        open={isCreateModalOpen}
-        onCancel={() => {
+      {/* Create New Config Drawer */}
+      <Drawer
+        title={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Create New Rate Config</span>
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                form.resetFields();
+              }}
+            />
+          </div>
+        }
+        placement="right"
+        onClose={() => {
           setIsCreateModalOpen(false);
           form.resetFields();
         }}
-        onOk={handleCreateConfig}
-        okText="Create & Edit Tiers"
+        open={isCreateModalOpen}
+        width={600}
+        closable={false}
+        maskClosable={false}
+        zIndex={1000}
+        styles={{ 
+          body: { transition: "transform 0.3s cubic-bezier(0.23, 1, 0.32, 1)" },
+          mask: { zIndex: 999, transition: "opacity 0.3s ease-in-out" },
+          wrapper: { transform: "translateX(0) !important" as any }
+        }}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -274,9 +311,25 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
                 return isNaN(num) ? 0 : num;
               }) as any}
             />
+            </Form.Item>
+
+          <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
+            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+              <Button
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  form.resetFields();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="primary" onClick={handleCreateConfig}>
+                Create & Edit Tiers
+              </Button>
+            </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </Drawer>
 
       {/* Tier Details Modal */}
       {editingConfig && (

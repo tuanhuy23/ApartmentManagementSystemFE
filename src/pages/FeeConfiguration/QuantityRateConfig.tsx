@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Modal, Table, Button, InputNumber, Input, Space } from "antd";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Drawer, Table, Button, InputNumber, Input, Space } from "antd";
+import { PlusOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
 import type { FeeType, QuantityRate } from "../../types/fee";
 
 interface QuantityRateConfigProps {
@@ -105,12 +105,29 @@ const QuantityRateConfig: React.FC<QuantityRateConfigProps> = ({
   ];
 
   return (
-    <Modal
-      title={`Rate Management: ${feeType.feeName} (QUANTITY)`}
+    <Drawer
+      title={
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>Rate Management: {feeType.feeName} (QUANTITY)</span>
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={onCancel}
+          />
+        </div>
+      }
+      placement="right"
+      onClose={onCancel}
       open={open}
-      onCancel={onCancel}
-      footer={null}
-      width={800}
+      width={600}
+      closable={false}
+      maskClosable={false}
+      zIndex={1000}
+      styles={{ 
+        body: { transition: "transform 0.3s cubic-bezier(0.23, 1, 0.32, 1)" },
+        mask: { zIndex: 999 },
+        wrapper: { transform: "translateX(0) !important" as any }
+      }}
     >
       <div style={{ marginBottom: 16 }}>
         <div>
@@ -143,7 +160,7 @@ const QuantityRateConfig: React.FC<QuantityRateConfigProps> = ({
           </Button>
         </Space>
       </div>
-    </Modal>
+    </Drawer>
   );
 };
 

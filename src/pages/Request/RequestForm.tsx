@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Form, Input, Button, Card, Typography, App, Space, Upload, Image, Select } from "antd";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, LoadingOutlined, PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
@@ -8,6 +8,7 @@ import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
 import { useAuth } from "../../hooks/useAuth";
 import { apartmentApi } from "../../api/apartmentApi";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { RequestDto } from "../../types/request";
 import type { FileAttachmentDto } from "../../types/file";
 import type { ApartmentDto } from "../../types/apartment";
@@ -26,24 +27,27 @@ const RequestForm: React.FC = () => {
   const [files, setFiles] = useState<FileAttachmentDto[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<boolean[]>([]);
   const [userApartment, setUserApartment] = useState<ApartmentDto | null>(null);
+  const hasFetchedRef = useRef(false);
+
+  const fetchApartments = async () => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
+    try {
+      const response = await apartmentApi.getAll();
+      if (response.data && response.data.length > 0) {
+        setUserApartment(response.data[0]);
+        form.setFieldsValue({ apartmentId: response.data[0].id });
+      }
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch apartments");
+      notification.error({ message: errorMessage });
+    }
+  };
 
   useEffect(() => {
     fetchApartments();
   }, []);
-
-  const fetchApartments = async () => {
-    try {
-      const response = await apartmentApi.getAll();
-      if (response.data && response.data.length > 0) {
-        // Try to find user's apartment (this is a simplified approach)
-        // In real app, you'd get apartmentId from user profile
-        setUserApartment(response.data[0]);
-        form.setFieldsValue({ apartmentId: response.data[0].id });
-      }
-    } catch {
-      notification.error({ message: "Failed to fetch apartments" });
-    }
-  };
 
   const handleFileUpload = async (index: number, file: File) => {
     try {
@@ -66,8 +70,9 @@ const RequestForm: React.FC = () => {
       };
       setFiles(newFiles);
       notification.success({ message: 'File uploaded successfully' });
-    } catch {
-      notification.error({ message: 'Failed to upload file' });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, 'Failed to upload file');
+      notification.error({ message: errorMessage });
     } finally {
       setUploadingFiles(prev => {
         const newArray = [...prev];
@@ -135,7 +140,8 @@ const RequestForm: React.FC = () => {
       if (error?.errorFields) {
         notification.error({ message: "Please check your input" });
       } else {
-        notification.error({ message: "Failed to create request" });
+        const errorMessage = getErrorMessage(error, "Failed to create request");
+        notification.error({ message: errorMessage });
       }
     } finally {
       setLoading(false);

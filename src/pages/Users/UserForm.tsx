@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons";
 import { userApi } from "../../api/userApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { CreateOrUpdateUserRequestDto } from "../../types/user";
 
 const { Title } = Typography;
@@ -45,8 +46,9 @@ const UserForm: React.FC = () => {
           });
         }
       }
-    } catch (error) {
-      notification.error({ message: "Failed to fetch user data" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch user data");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -76,8 +78,10 @@ const UserForm: React.FC = () => {
       }
       
       navigate(`/${apartmentBuildingId}/users`);
-    } catch (error) {
-      notification.error({ message: isEditMode ? "Failed to update user" : "Failed to create user" });
+    } catch (error: unknown) {
+      const defaultMessage = isEditMode ? "Failed to update user" : "Failed to create user";
+      const errorMessage = getErrorMessage(error, defaultMessage);
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }

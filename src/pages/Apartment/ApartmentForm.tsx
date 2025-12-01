@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Form, Input, InputNumber, Button, Typography, Space, App } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { apartmentApi } from "../../api/apartmentApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { CreateOrUpdateApartmentDto } from "../../types/apartment";
 
 const { Title } = Typography;
@@ -15,30 +16,50 @@ const ApartmentForm: React.FC = () => {
   const { apartmentId } = useParams<{ apartmentId: string }>();
   const apartmentBuildingId = useApartmentBuildingId();
   const isEditMode = !!apartmentId;
-
-  useEffect(() => {
-    if (isEditMode && apartmentId) {
-      fetchApartment(apartmentId);
-    }
-  }, [apartmentId, isEditMode]);
+  const fetchedApartmentIdRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchApartment = async (id: string) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       setLoading(true);
       const response = await apartmentApi.getById(id);
-      if (response.data) {
+      if (!abortController.signal.aborted && response.data) {
         form.setFieldsValue({
           name: response.data.name,
           area: response.data.area,
           floor: response.data.floor,
         });
       }
-    } catch {
-      notification.error({ message: "Failed to fetch apartment details" });
+    } catch (error: unknown) {
+      if (!abortController.signal.aborted) {
+        const errorMessage = getErrorMessage(error, "Failed to fetch apartment details");
+        notification.error({ message: errorMessage });
+      }
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
   };
+
+  useEffect(() => {
+    if (isEditMode && apartmentId && fetchedApartmentIdRef.current !== apartmentId) {
+      fetchedApartmentIdRef.current = apartmentId;
+      fetchApartment(apartmentId);
+    }
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [apartmentId, isEditMode]);
 
   const handleSubmit = async (values: CreateOrUpdateApartmentDto) => {
     try {
@@ -56,18 +77,7 @@ const ApartmentForm: React.FC = () => {
       navigate(`/${apartmentBuildingId}/apartments`);
     } catch (error: any) {
       console.error("Error saving apartment:", error);
-      let errorMessage = "Failed to save apartment";
-      
-      if (error?.response?.data) {
-        if (error.response.data.error?.message) {
-          errorMessage = error.response.data.error.message;
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message;
-        }
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-      
+      const errorMessage = getErrorMessage(error, "Failed to save apartment");
       notification.error({ message: errorMessage });
     } finally {
       setLoading(false);

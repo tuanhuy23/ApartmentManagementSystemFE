@@ -12,6 +12,7 @@ import {
 } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { accountApi } from "../../api/accountApi";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { AccountInfoResponseDto, ChangePasswordRequestDto } from "../../types/user";
 
 const { Title, Text } = Typography;
@@ -35,8 +36,9 @@ const UserProfile: React.FC = () => {
       if (response.data) {
         setProfile(response.data);
       }
-    } catch  {
-      notification.error({ message: "Failed to fetch profile information" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch profile information");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -54,8 +56,9 @@ const UserProfile: React.FC = () => {
       } else {
         notification.error({ message: "Failed to change password" });
       }
-    } catch {
-      notification.error({ message: "Failed to change password" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to change password");
+      notification.error({ message: errorMessage });
     } finally {
       setPasswordLoading(false);
     }

@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Table, Button, Space, Tag, Modal, Drawer, Form, Input, DatePicker, Select, App, Typography } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined, SearchOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { apartmentApi } from "../../api/apartmentApi";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { ResidentDto } from "../../types/resident";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
+import type { FilterQuery, SortQuery } from "../../types/apiResponse";
+import { FilterOperator, SortDirection } from "../../types/apiResponse";
 import dayjs from "dayjs";
 
 const { Option } = Select;
@@ -24,29 +27,66 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
   const [isConfirmDrawerVisible, setIsConfirmDrawerVisible] = useState(false);
   const [selectedResident, setSelectedResident] = useState<ResidentDto | null>(null);
   const [form] = Form.useForm<ResidentDto>();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sorts, setSorts] = useState<SortQuery[]>([]);
   const fetchedApartmentIdRef = useRef<string | null>(null);
+  const residentsAbortRef = useRef<AbortController | null>(null);
   const memberType = Form.useWatch("memberType", form) || "MEMBER";
 
   const fetchResidents = useCallback(async () => {
     if (!apartmentId) return;
+    if (residentsAbortRef.current) {
+      residentsAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    residentsAbortRef.current = abortController;
+
     try {
       setLoading(true);
-      const response = await apartmentApi.getResidents(apartmentId);
-      if (response.data) {
+      const filters: FilterQuery[] = [];
+      
+      if (searchTerm) {
+        filters.push({
+          Code: "name",
+          Operator: FilterOperator.Contains,
+          Value: searchTerm,
+        });
+      }
+
+      const response = await apartmentApi.getResidents(apartmentId, {
+        filters: filters.length > 0 ? filters : undefined,
+        sorts: sorts.length > 0 ? sorts : undefined,
+        page: currentPage,
+        limit: pageSize,
+      });
+      
+      if (!abortController.signal.aborted && response.data) {
         setResidents(response.data);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch residents" });
+    } catch (error: unknown) {
+      if (!abortController.signal.aborted) {
+        const errorMessage = getErrorMessage(error, "Failed to fetch residents");
+        notification.error({ message: errorMessage });
+      }
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [apartmentId, notification]);
+  }, [apartmentId, searchTerm, sorts, currentPage, pageSize]);
 
   useEffect(() => {
     if (apartmentId && fetchedApartmentIdRef.current !== apartmentId) {
       fetchedApartmentIdRef.current = apartmentId;
       fetchResidents();
     }
+    return () => {
+      if (residentsAbortRef.current) {
+        residentsAbortRef.current.abort();
+      }
+    };
   }, [apartmentId, fetchResidents]);
 
   const handleCreate = () => {
@@ -70,8 +110,9 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
         } as any);
         setIsModalVisible(true);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch resident details" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch resident details");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -123,7 +164,8 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
       if (error?.errorFields) {
         notification.error({ message: "Please check your input" });
       } else {
-        notification.error({ message: "Failed to save resident" });
+        const errorMessage = getErrorMessage(error, "Failed to save resident");
+        notification.error({ message: errorMessage });
       }
     } finally {
       setSubmitting(false);
@@ -149,33 +191,67 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
     setIsConfirmDrawerVisible(false);
   };
 
+  const handleTableChange = (
+    _pagination: any,
+    _filters: any,
+    sorter: any
+  ) => {
+    if (sorter && sorter.columnKey) {
+      const newSorts: SortQuery[] = [
+        {
+          Code: sorter.columnKey,
+          Direction: sorter.order === "ascend" ? SortDirection.Ascending : SortDirection.Descending,
+        },
+      ];
+      setSorts(newSorts);
+      setCurrentPage(1);
+    } else {
+      setSorts([]);
+    }
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
   const columns: ColumnsType<ResidentDto> = [
     {
       title: "Name",
       dataIndex: "name",
       key: "name",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Email",
       dataIndex: "email",
       key: "email",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Phone",
       dataIndex: "phoneNumber",
       key: "phoneNumber",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
       render: (text: string) => text || "N/A",
     },
     {
       title: "Member Type",
       dataIndex: "memberType",
       key: "memberType",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
       render: (type: string) => <Tag>{type}</Tag>,
     },
     {
       title: "Is Owner",
       dataIndex: "isOwner",
       key: "isOwner",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
       render: (isOwner: boolean) => (
         <Tag color={isOwner ? "green" : "default"}>{isOwner ? "Yes" : "No"}</Tag>
       ),
@@ -205,10 +281,64 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
 
   return (
     <>
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
           Add Resident
         </Button>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ 
+          display: 'flex', 
+          maxWidth: 400,
+          borderRadius: '6px',
+          overflow: 'hidden',
+          border: '1px solid #d9d9d9',
+          backgroundColor: '#ffffff'
+        }}>
+          <Input
+            placeholder="Search by name"
+            allowClear
+            size="large"
+            value={searchTerm}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchTerm(value);
+              if (!value) {
+                handleSearch("");
+              }
+            }}
+            onPressEnter={(e) => {
+              handleSearch((e.target as HTMLInputElement).value);
+            }}
+            bordered={false}
+            style={{
+              flex: 1,
+              border: 'none',
+              backgroundColor: '#ffffff',
+            }}
+          />
+          <div style={{
+            width: '1px',
+            backgroundColor: '#d9d9d9',
+            margin: '8px 0'
+          }} />
+          <Button
+            size="large"
+            icon={<SearchOutlined />}
+            onClick={() => handleSearch(searchTerm)}
+            type="text"
+            style={{
+              border: 'none',
+              backgroundColor: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 0,
+              color: '#8c8c8c',
+            }}
+          />
+        </div>
       </div>
 
       <Table
@@ -216,10 +346,18 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
         dataSource={residents}
         rowKey="id"
         loading={loading}
+        onChange={handleTableChange}
         pagination={{
-          pageSize: 10,
+          current: currentPage,
+          pageSize: pageSize,
           showSizeChanger: true,
-          showTotal: (total) => `Total ${total} residents`,
+          showQuickJumper: true,
+          showTotal: (total, range) =>
+            `${range[0]}-${range[1]} of ${total} residents`,
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            setPageSize(size);
+          },
         }}
       />
 

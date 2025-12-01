@@ -1,10 +1,14 @@
-import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, Space, App, Breadcrumb } from "antd";
-import { PlusOutlined, UserOutlined, EditOutlined, DeleteOutlined, HomeOutlined } from "@ant-design/icons";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { Table, Typography, Button, Space, App, Breadcrumb, Input } from "antd";
+import { PlusOutlined, UserOutlined, EditOutlined, DeleteOutlined, HomeOutlined, SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { userApi } from "../../api/userApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { UserDto } from "../../types/user";
+import type { FilterQuery, SortQuery } from "../../types/apiResponse";
+import { FilterOperator, SortDirection } from "../../types/apiResponse";
+import type { ColumnType } from "antd/es/table";
 
 const { Title } = Typography;
 
@@ -12,31 +16,72 @@ const Users: React.FC = () => {
   const { notification } = App.useApp();
   const [users, setUsers] = useState<UserDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const hasFetchedRef = useRef(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sorts, setSorts] = useState<SortQuery[]>([]);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const requestKeyRef = useRef<string>("");
 
-  useEffect(() => {
-    if (hasFetchedRef.current) {
+  const fetchUsers = useCallback(async () => {
+    const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
+    
+    if (requestKeyRef.current === requestKey) {
       return;
     }
-    hasFetchedRef.current = true;
-    fetchUsers();
-  }, []);
 
-  const fetchUsers = async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    requestKeyRef.current = requestKey;
+
     try {
       setLoading(true);
-      const response = await userApi.getAll();
-      if (response.data) {
+      const filters: FilterQuery[] = [];
+      
+      if (searchTerm) {
+        filters.push({
+          Code: "displayName",
+          Operator: FilterOperator.Contains,
+          Value: searchTerm,
+        });
+      }
+
+      const response = await userApi.getAll({
+        filters: filters.length > 0 ? filters : undefined,
+        sorts: sorts.length > 0 ? sorts : undefined,
+        page: currentPage,
+        limit: pageSize,
+      });
+      
+      if (!abortController.signal.aborted && requestKeyRef.current === requestKey && response.data) {
         setUsers(response.data);
       }
-    } catch  {
-      notification.error({ message: "Failed to fetch users" });
+    } catch (error: unknown) {
+      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
+        const errorMessage = getErrorMessage(error, "Failed to fetch users");
+        notification.error({ message: errorMessage });
+      }
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
+        setLoading(false);
+      }
     }
-  };
+  }, [searchTerm, sorts, currentPage, pageSize]);
+
+  useEffect(() => {
+    fetchUsers();
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchUsers]);
 
   const handleEdit = (userId: string) => {
     navigate(`/${apartmentBuildingId}/users/edit/${userId}`);
@@ -47,48 +92,79 @@ const Users: React.FC = () => {
       await userApi.delete([userId]);
       notification.success({ message: "User deleted successfully!" });
       fetchUsers(); // Refresh the list
-    } catch {
-      notification.error({ message: "Failed to delete user" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to delete user");
+      notification.error({ message: errorMessage });
     }
   };
 
-  const columns = [
-    {
-      title: "ID",
-      dataIndex: "userId",
-      key: "userId",
-      width: 100,
-    },
+  const handleTableChange = (
+    _pagination: any,
+    _filters: any,
+    sorter: any
+  ) => {
+    if (sorter && sorter.columnKey) {
+      const newSorts: SortQuery[] = [
+        {
+          Code: sorter.columnKey,
+          Direction: sorter.order === "ascend" ? SortDirection.Ascending : SortDirection.Descending,
+        },
+      ];
+      setSorts(newSorts);
+      setCurrentPage(1);
+    } else {
+      setSorts([]);
+    }
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const columns: ColumnType<UserDto>[] = [
     {
       title: "Display Name",
       dataIndex: "displayName",
       key: "displayName",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Email",
       dataIndex: "email",
       key: "email",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Username",
       dataIndex: "userName",
       key: "userName",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Role",
       dataIndex: "roleName",
       key: "roleName",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Apartment",
       dataIndex: "appartmentName",
       key: "appartmentName",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
       render: (text: string) => text || "N/A",
     },
     {
       title: "Phone",
       dataIndex: "phoneNumber",
       key: "phoneNumber",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
       render: (text: string) => text || "N/A",
     },
     {
@@ -98,22 +174,19 @@ const Users: React.FC = () => {
       render: (_: unknown, record: UserDto) => (
         <Space size="small">
           <Button 
-            type="link" 
+            type="text" 
             size="small" 
-            icon={<EditOutlined />}
+            icon={<EditOutlined style={{ color: "#000" }} />}
             onClick={() => handleEdit(record.userId!)}
-          >
-            Edit
-          </Button>
+            style={{ color: "#000" }}
+          />
           <Button 
-            type="link" 
+            type="text" 
             size="small" 
-            danger
-            icon={<DeleteOutlined />}
+            icon={<DeleteOutlined style={{ color: "#000" }} />}
             onClick={() => handleDelete(record.userId!)}
-          >
-            Delete
-          </Button>
+            style={{ color: "#000" }}
+          />
         </Space>
       ),
     },
@@ -155,18 +228,78 @@ const Users: React.FC = () => {
           Add New User
         </Button>
       </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ 
+          display: 'flex', 
+          maxWidth: 400,
+          borderRadius: '6px',
+          overflow: 'hidden',
+          border: '1px solid #d9d9d9',
+          backgroundColor: '#ffffff'
+        }}>
+          <Input
+            placeholder="Search by name"
+            allowClear
+            size="large"
+            value={searchTerm}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchTerm(value);
+              if (!value) {
+                handleSearch("");
+              }
+            }}
+            onPressEnter={(e) => {
+              handleSearch((e.target as HTMLInputElement).value);
+            }}
+            bordered={false}
+            style={{
+              flex: 1,
+              border: 'none',
+              backgroundColor: '#ffffff',
+            }}
+          />
+          <div style={{
+            width: '1px',
+            backgroundColor: '#d9d9d9',
+            margin: '8px 0'
+          }} />
+          <Button
+            size="large"
+            icon={<SearchOutlined />}
+            onClick={() => handleSearch(searchTerm)}
+            type="text"
+            style={{
+              border: 'none',
+              backgroundColor: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 0,
+              color: '#8c8c8c',
+            }}
+          />
+        </div>
+      </div>
       
       <Table
         rowKey="userId"
         dataSource={users}
         columns={columns}
         loading={loading}
+        onChange={handleTableChange}
         pagination={{
-          pageSize: 10,
+          current: currentPage,
+          pageSize: pageSize,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) => 
             `${range[0]}-${range[1]} of ${total} users`,
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            setPageSize(size);
+          },
         }}
         scroll={{ x: 800 }}
       />

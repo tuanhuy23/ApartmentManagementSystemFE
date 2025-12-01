@@ -6,6 +6,7 @@ import { accountApi } from "../../api/accountApi";
 import { tokenStorage } from "../../utils/storage";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
 import { useAuth } from "../../hooks/useAuth";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { ChangePasswordRequestDto } from "../../types/user";
 
 const { Title } = Typography;
@@ -47,8 +48,9 @@ const ChangePassword: React.FC = () => {
       } else {
         notification.error({ message: "Failed to change password" });
       }
-    } catch {
-      notification.error({ message: "Failed to change password" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to change password");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }

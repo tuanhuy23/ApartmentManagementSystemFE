@@ -20,7 +20,6 @@ import {
   App,
   Tabs,
 } from "antd";
-import type { FilterDropdownProps } from "antd/es/table/interface";
 import {
   PlusOutlined,
   EyeOutlined,
@@ -28,12 +27,14 @@ import {
   DeleteOutlined,
   ReloadOutlined,
   SendOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { apartmentApi } from "../../api/apartmentApi";
 import { feeApi } from "../../api/feeApi";
 import { feeConfigurationApi } from "../../api/feeConfigurationApi";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type {
   FeeNotice,
   UtilityReading,
@@ -69,13 +70,26 @@ const ApartmentDetail: React.FC = () => {
   const [feeTypes, setFeeTypes] = useState<FeeType[]>([]);
   const [oldReadings, setOldReadings] = useState<Record<string, UtilityReadingDto | null>>({});
   const [allUtilityReadings, setAllUtilityReadings] = useState<UtilityReadingDto[]>([]);
+  const [feeNoticeCurrentPage, setFeeNoticeCurrentPage] = useState(1);
+  const [feeNoticePageSize, setFeeNoticePageSize] = useState(10);
+  const [utilityReadingCurrentPage, setUtilityReadingCurrentPage] = useState(1);
+  const [utilityReadingPageSize, setUtilityReadingPageSize] = useState(10);
   const fetchedApartmentIdRef = useRef<string | null>(null);
+  const utilityReadingsAbortRef = useRef<AbortController | null>(null);
+  const apartmentDetailAbortRef = useRef<AbortController | null>(null);
+  const feeNoticesAbortRef = useRef<AbortController | null>(null);
 
   const fetchUtilityReadings = useCallback(async () => {
     if (!apartmentId) return;
+    if (utilityReadingsAbortRef.current) {
+      utilityReadingsAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    utilityReadingsAbortRef.current = abortController;
+
     try {
       const response = await feeApi.getUtilityReadings(apartmentId);
-      if (response.data) {
+      if (!abortController.signal.aborted && response.data) {
         setAllUtilityReadings(response.data);
         const convertedReadings: UtilityReading[] = response.data.map((dto) => ({
           id: dto.id,
@@ -87,17 +101,26 @@ const ApartmentDetail: React.FC = () => {
         }));
         setUtilityReadings(convertedReadings);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch utility readings" });
+    } catch (error: unknown) {
+      if (!abortController.signal.aborted) {
+        const errorMessage = getErrorMessage(error, "Failed to fetch utility readings");
+        notification.error({ message: errorMessage });
+      }
     }
-  }, [apartmentId, notification]);
+  }, [apartmentId]);
 
   const fetchApartmentDetail = useCallback(async () => {
     if (!apartmentId) return;
+    if (apartmentDetailAbortRef.current) {
+      apartmentDetailAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    apartmentDetailAbortRef.current = abortController;
+
     try {
       setLoading(true);
       const response = await apartmentApi.getById(apartmentId);
-      if (response.data) {
+      if (!abortController.signal.aborted && response.data) {
         setApartmentData(response.data);
         apartmentForm.setFieldsValue({
           name: response.data.name,
@@ -105,19 +128,30 @@ const ApartmentDetail: React.FC = () => {
           floor: response.data.floor,
         });
       }
-    } catch {
-      notification.error({ message: "Failed to fetch apartment details" });
+    } catch (error: unknown) {
+      if (!abortController.signal.aborted) {
+        const errorMessage = getErrorMessage(error, "Failed to fetch apartment details");
+        notification.error({ message: errorMessage });
+      }
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [apartmentId, apartmentForm, notification]);
+  }, [apartmentId, apartmentForm]);
 
   const fetchFeeNotices = useCallback(async () => {
     if (!apartmentId) return;
+    if (feeNoticesAbortRef.current) {
+      feeNoticesAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    feeNoticesAbortRef.current = abortController;
+
     try {
       setLoading(true);
       const response = await feeApi.getByApartmentId(apartmentId);
-      if (response.data) {
+      if (!abortController.signal.aborted && response.data) {
         const convertedNotices: FeeNotice[] = response.data.map((dto) => ({
           id: dto.id,
           cycle: dto.billingCycle,
@@ -127,12 +161,17 @@ const ApartmentDetail: React.FC = () => {
         }));
         setFeeNotices(convertedNotices);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch fee notices" });
+    } catch (error: unknown) {
+      if (!abortController.signal.aborted) {
+        const errorMessage = getErrorMessage(error, "Failed to fetch fee notices");
+        notification.error({ message: errorMessage });
+      }
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [apartmentId, notification]);
+  }, [apartmentId]);
 
   useEffect(() => {
     if (apartmentId && fetchedApartmentIdRef.current !== apartmentId) {
@@ -141,6 +180,17 @@ const ApartmentDetail: React.FC = () => {
       fetchFeeNotices();
       fetchUtilityReadings();
     }
+    return () => {
+      if (utilityReadingsAbortRef.current) {
+        utilityReadingsAbortRef.current.abort();
+      }
+      if (apartmentDetailAbortRef.current) {
+        apartmentDetailAbortRef.current.abort();
+      }
+      if (feeNoticesAbortRef.current) {
+        feeNoticesAbortRef.current.abort();
+      }
+    };
   }, [apartmentId, fetchApartmentDetail, fetchFeeNotices, fetchUtilityReadings]);
 
   const fetchFeeTypes = useCallback(async () => {
@@ -156,10 +206,11 @@ const ApartmentDetail: React.FC = () => {
           }));
         setFeeTypes(convertedTypes);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch fee types" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch fee types");
+      notification.error({ message: errorMessage });
     }
-  }, [notification]);
+  }, []);
 
   useEffect(() => {
     if (isModalVisible) {
@@ -215,50 +266,13 @@ const ApartmentDetail: React.FC = () => {
     }
   };
 
-  const getColumnSearchProps = (dataIndex: string) => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
-      <div style={{ padding: 8 }}>
-        <Input
-          placeholder={`Search ${dataIndex}`}
-          value={selectedKeys[0]}
-          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: "block" }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Search
-          </Button>
-          <Button
-            onClick={() => {
-              clearFilters?.();
-              confirm();
-            }}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Reset
-          </Button>
-        </Space>
-      </div>
-    ),
-    onFilter: (value: any, record: any) =>
-      record[dataIndex]
-        ? record[dataIndex].toString().toLowerCase().includes(value.toLowerCase())
-        : false,
-  });
-
   const feeNoticeColumns: ColumnsType<FeeNotice> = [
     {
       title: "Cycle",
       dataIndex: "cycle",
       key: "cycle",
-      ...getColumnSearchProps("cycle"),
+      sorter: (a, b) => a.cycle.localeCompare(b.cycle),
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Total Amount",
@@ -266,12 +280,15 @@ const ApartmentDetail: React.FC = () => {
       key: "totalAmount",
       render: (amount: number) => formatCurrency(amount),
       sorter: (a, b) => a.totalAmount - b.totalAmount,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
       render: (status: string) => getStatusTag(status),
+      sorter: (a, b) => a.status.localeCompare(b.status),
+      sortDirections: ["ascend", "descend"],
       filters: [
         { text: "DRAFT", value: "DRAFT" },
         { text: "ISSUED", value: "ISSUED" },
@@ -283,6 +300,8 @@ const ApartmentDetail: React.FC = () => {
       dataIndex: "paymentStatus",
       key: "paymentStatus",
       render: (paymentStatus: string) => getPaymentStatusTag(paymentStatus),
+      sorter: (a, b) => a.paymentStatus.localeCompare(b.paymentStatus),
+      sortDirections: ["ascend", "descend"],
       filters: [
         { text: "N/A", value: "N/A" },
         { text: "UNPAID", value: "UNPAID" },
@@ -340,6 +359,8 @@ const ApartmentDetail: React.FC = () => {
       dataIndex: "type",
       key: "type",
       render: (type: string) => type === "Electricity" ? "Electricity" : "Water",
+      sorter: (a, b) => a.type.localeCompare(b.type),
+      sortDirections: ["ascend", "descend"],
       filters: [
         { text: "Electricity", value: "Electricity" },
         { text: "Water", value: "Water" },
@@ -350,8 +371,8 @@ const ApartmentDetail: React.FC = () => {
       title: "Reading Date",
       dataIndex: "readingDate",
       key: "readingDate",
-      ...getColumnSearchProps("readingDate"),
       sorter: (a, b) => a.readingDate.localeCompare(b.readingDate),
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Reading Value",
@@ -360,6 +381,7 @@ const ApartmentDetail: React.FC = () => {
       render: (value: number, record: UtilityReading) =>
         `${value} ${record.unit}`,
       sorter: (a, b) => a.readingValue - b.readingValue,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Consumption (Auto-calculated)",
@@ -368,6 +390,7 @@ const ApartmentDetail: React.FC = () => {
       render: (consumption: number, record: UtilityReading) =>
         `${consumption} ${record.unit}`,
       sorter: (a, b) => a.consumption - b.consumption,
+      sortDirections: ["ascend", "descend"],
     },
   ];
 
@@ -470,7 +493,8 @@ const ApartmentDetail: React.FC = () => {
       if (error?.errorFields) {
         notification.error({ message: "Please check your information!" });
       } else {
-        notification.error({ message: error?.response?.data?.message || "Failed to save draft" });
+        const errorMessage = getErrorMessage(error, "Failed to save draft");
+        notification.error({ message: errorMessage });
       }
     } finally {
       setLoading(false);
@@ -576,25 +600,78 @@ const ApartmentDetail: React.FC = () => {
                     <Title level={4}>2. Invoice History (Fee Notice History)</Title>
                   </div>
 
-                  <Input.Search
-                    placeholder="Search in table..."
-                    allowClear
-                    style={{ marginBottom: 16, maxWidth: 400 }}
-                    onSearch={(value) => setFeeNoticeSearchText(value)}
-                    onChange={(e) => {
-                      if (!e.target.value) setFeeNoticeSearchText("");
-                    }}
-                  />
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      maxWidth: 400,
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      border: '1px solid #d9d9d9',
+                      backgroundColor: '#ffffff'
+                    }}>
+                      <Input
+                        placeholder="Search in table..."
+                        allowClear
+                        size="large"
+                        value={feeNoticeSearchText}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFeeNoticeSearchText(value);
+                          if (!value) {
+                            setFeeNoticeCurrentPage(1);
+                          }
+                        }}
+                        onPressEnter={(e) => {
+                          setFeeNoticeSearchText((e.target as HTMLInputElement).value);
+                          setFeeNoticeCurrentPage(1);
+                        }}
+                        bordered={false}
+                        style={{
+                          flex: 1,
+                          border: 'none',
+                          backgroundColor: '#ffffff',
+                        }}
+                      />
+                      <div style={{
+                        width: '1px',
+                        backgroundColor: '#d9d9d9',
+                        margin: '8px 0'
+                      }} />
+                      <Button
+                        size="large"
+                        icon={<SearchOutlined />}
+                        onClick={() => {
+                          setFeeNoticeCurrentPage(1);
+                        }}
+                        type="text"
+                        style={{
+                          border: 'none',
+                          backgroundColor: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 0,
+                          color: '#8c8c8c',
+                        }}
+                      />
+                    </div>
+                  </div>
 
                   <Table
                     columns={feeNoticeColumns}
                     dataSource={filteredFeeNotices}
                     rowKey="id"
                     pagination={{
-                      pageSize: 5,
-                      showSizeChanger: false,
+                      current: feeNoticeCurrentPage,
+                      pageSize: feeNoticePageSize,
+                      showSizeChanger: true,
+                      showQuickJumper: true,
                       showTotal: (total, range) =>
                         `${range[0]}-${range[1]} of ${total} items`,
+                      onChange: (page, size) => {
+                        setFeeNoticeCurrentPage(page);
+                        setFeeNoticePageSize(size);
+                      },
                     }}
                   />
                 </div>
@@ -605,25 +682,78 @@ const ApartmentDetail: React.FC = () => {
               label: "Utility Reading History",
               children: (
                 <div>
-                  <Input.Search
-                    placeholder="Search in table..."
-                    allowClear
-                    style={{ marginBottom: 16, maxWidth: 400 }}
-                    onSearch={(value) => setUtilityReadingSearchText(value)}
-                    onChange={(e) => {
-                      if (!e.target.value) setUtilityReadingSearchText("");
-                    }}
-                  />
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      maxWidth: 400,
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      border: '1px solid #d9d9d9',
+                      backgroundColor: '#ffffff'
+                    }}>
+                      <Input
+                        placeholder="Search in table..."
+                        allowClear
+                        size="large"
+                        value={utilityReadingSearchText}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setUtilityReadingSearchText(value);
+                          if (!value) {
+                            setUtilityReadingCurrentPage(1);
+                          }
+                        }}
+                        onPressEnter={(e) => {
+                          setUtilityReadingSearchText((e.target as HTMLInputElement).value);
+                          setUtilityReadingCurrentPage(1);
+                        }}
+                        bordered={false}
+                        style={{
+                          flex: 1,
+                          border: 'none',
+                          backgroundColor: '#ffffff',
+                        }}
+                      />
+                      <div style={{
+                        width: '1px',
+                        backgroundColor: '#d9d9d9',
+                        margin: '8px 0'
+                      }} />
+                      <Button
+                        size="large"
+                        icon={<SearchOutlined />}
+                        onClick={() => {
+                          setUtilityReadingCurrentPage(1);
+                        }}
+                        type="text"
+                        style={{
+                          border: 'none',
+                          backgroundColor: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 0,
+                          color: '#8c8c8c',
+                        }}
+                      />
+                    </div>
+                  </div>
 
                   <Table
                     columns={utilityReadingColumns}
                     dataSource={filteredUtilityReadings}
                     rowKey="id"
                     pagination={{
-                      pageSize: 5,
-                      showSizeChanger: false,
+                      current: utilityReadingCurrentPage,
+                      pageSize: utilityReadingPageSize,
+                      showSizeChanger: true,
+                      showQuickJumper: true,
                       showTotal: (total, range) =>
                         `${range[0]}-${range[1]} of ${total} items`,
+                      onChange: (page, size) => {
+                        setUtilityReadingCurrentPage(page);
+                        setUtilityReadingPageSize(size);
+                      },
                     }}
                   />
                 </div>
@@ -805,25 +935,78 @@ const ApartmentDetail: React.FC = () => {
               This area serves as a Ledger to check raw data history.
             </Text>
 
-            <Input.Search
-              placeholder="Search in table..."
-              allowClear
-              style={{ marginBottom: 16, maxWidth: 400 }}
-              onSearch={(value) => setUtilityReadingSearchText(value)}
-              onChange={(e) => {
-                if (!e.target.value) setUtilityReadingSearchText("");
-              }}
-            />
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ 
+                display: 'flex', 
+                maxWidth: 400,
+                borderRadius: '6px',
+                overflow: 'hidden',
+                border: '1px solid #d9d9d9',
+                backgroundColor: '#ffffff'
+              }}>
+                <Input
+                  placeholder="Search in table..."
+                  allowClear
+                  size="large"
+                  value={utilityReadingSearchText}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setUtilityReadingSearchText(value);
+                    if (!value) {
+                      setUtilityReadingCurrentPage(1);
+                    }
+                  }}
+                  onPressEnter={(e) => {
+                    setUtilityReadingSearchText((e.target as HTMLInputElement).value);
+                    setUtilityReadingCurrentPage(1);
+                  }}
+                  bordered={false}
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    backgroundColor: '#ffffff',
+                  }}
+                />
+                <div style={{
+                  width: '1px',
+                  backgroundColor: '#d9d9d9',
+                  margin: '8px 0'
+                }} />
+                <Button
+                  size="large"
+                  icon={<SearchOutlined />}
+                  onClick={() => {
+                    setUtilityReadingCurrentPage(1);
+                  }}
+                  type="text"
+                  style={{
+                    border: 'none',
+                    backgroundColor: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 0,
+                    color: '#8c8c8c',
+                  }}
+                />
+              </div>
+            </div>
 
             <Table
               columns={utilityReadingColumns}
               dataSource={filteredUtilityReadings}
               rowKey="id"
               pagination={{
-                pageSize: 5,
-                showSizeChanger: false,
+                current: utilityReadingCurrentPage,
+                pageSize: utilityReadingPageSize,
+                showSizeChanger: true,
+                showQuickJumper: true,
                 showTotal: (total, range) =>
                   `${range[0]}-${range[1]} of ${total} items`,
+                onChange: (page, size) => {
+                  setUtilityReadingCurrentPage(page);
+                  setUtilityReadingPageSize(size);
+                },
               }}
             />
           </Card>

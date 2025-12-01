@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons";
 import { announcementApi } from "../../api/announcementApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { AnnouncementDto } from "../../types/announcement";
 import dayjs from "dayjs";
 
@@ -51,7 +52,8 @@ const AnnouncementForm: React.FC = () => {
       if (error?.errorFields) {
         notification.error({ message: "Please check your input" });
       } else {
-        notification.error({ message: "Failed to create announcement" });
+        const errorMessage = getErrorMessage(error, "Failed to create announcement");
+        notification.error({ message: errorMessage });
       }
     } finally {
       setLoading(false);

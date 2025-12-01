@@ -6,6 +6,7 @@ import { accountApi } from "../../api/accountApi";
 import { tokenStorage } from "../../utils/storage";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
 import { useAuth } from "../../hooks/useAuth";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { LoginRequestDto } from "../../types/user";
 
 const { Title } = Typography;
@@ -46,16 +47,10 @@ const Login: React.FC = () => {
           const apartmentBuildingId = getApartmentBuildingIdFromToken();
           navigate(apartmentBuildingId ? `/${apartmentBuildingId}` : "/");
         } else {
-          notification.error({ message: response.error.message || "Login failed!" });
+          notification.error({ message: response.error?.message || "Login failed!" });
         }
     } catch (error: unknown) {
-      let errorMessage = "Login failed!";
-      
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { data?: { message?: string } } };
-        errorMessage = axiosError.response?.data?.message || "Login failed!";
-      }
-      
+      const errorMessage = getErrorMessage(error, "Login failed!");
       notification.error({ message: errorMessage });
     } finally {
       setLoading(false);

@@ -31,6 +31,7 @@ import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { useAuth } from "../../hooks/useAuth";
 import { apartmentApi } from "../../api/apartmentApi";
 import { userApi } from "../../api/userApi";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { RequestDto, ActivityLogEntry } from "../../types/request";
 import type { ApartmentDto } from "../../types/apartment";
 import type { UserDto } from "../../types/user";
@@ -54,13 +55,20 @@ const RequestDetail: React.FC = () => {
   const [submittedByUser, setSubmittedByUser] = useState<UserDto | null>(null);
   const [staffUsers, setStaffUsers] = useState<UserDto[]>([]);
   const fetchedRequestIdRef = useRef<string | null>(null);
+  const requestAbortRef = useRef<AbortController | null>(null);
 
   const fetchRequest = useCallback(async () => {
     if (!id || !apartmentBuildingId) return;
+    if (requestAbortRef.current) {
+      requestAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    requestAbortRef.current = abortController;
+
     try {
       setLoading(true);
       const response = await requestApi.getById(id);
-      if (response.data) {
+      if (!abortController.signal.aborted && response.data) {
         const requestData = response.data;
         setRequest(requestData);
         form.setFieldsValue({
@@ -72,7 +80,7 @@ const RequestDetail: React.FC = () => {
 
         if (requestData.apartmentId) {
           const apartmentResponse = await apartmentApi.getById(requestData.apartmentId);
-          if (apartmentResponse.data) {
+          if (!abortController.signal.aborted && apartmentResponse.data) {
             setApartment(apartmentResponse.data);
           }
         }
@@ -80,20 +88,24 @@ const RequestDetail: React.FC = () => {
         if (requestData.userId) {
           try {
             const userResponse = await userApi.getById(requestData.userId);
-            if (userResponse.data) {
+            if (!abortController.signal.aborted && userResponse.data) {
               setSubmittedByUser(userResponse.data);
             }
           } catch {
-            // User might not exist
           }
         }
       }
-    } catch {
-      notification.error({ message: "Failed to fetch request details" });
+    } catch (error: unknown) {
+      if (!abortController.signal.aborted) {
+        const errorMessage = getErrorMessage(error, "Failed to fetch request details");
+        notification.error({ message: errorMessage });
+      }
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
     }
-  }, [id, apartmentBuildingId, notification, form]);
+  }, [id, apartmentBuildingId, form]);
 
   const fetchStaffUsers = useCallback(async () => {
     if (!apartmentBuildingId) return;
@@ -113,6 +125,11 @@ const RequestDetail: React.FC = () => {
       fetchRequest();
       fetchStaffUsers();
     }
+    return () => {
+      if (requestAbortRef.current) {
+        requestAbortRef.current.abort();
+      }
+    };
   }, [id, apartmentBuildingId, fetchRequest, fetchStaffUsers]);
 
   const handleUpdate = async () => {
@@ -150,7 +167,8 @@ const RequestDetail: React.FC = () => {
       if (error?.errorFields) {
         notification.error({ message: "Please check your input" });
       } else {
-        notification.error({ message: "Failed to update request" });
+        const errorMessage = getErrorMessage(error, "Failed to update request");
+        notification.error({ message: errorMessage });
       }
     } finally {
       setSubmitting(false);

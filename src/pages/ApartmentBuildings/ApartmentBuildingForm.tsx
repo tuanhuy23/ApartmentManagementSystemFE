@@ -6,6 +6,7 @@ import type { UploadProps } from "antd";
 import { apartmentBuildingApi } from "../../api/apartmentBuildingApi";
 import { fileApi } from "../../api/fileApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { CreateApartmentBuildingDto, ApartmentBuildingImageDto } from "../../types/apartmentBuilding";
 
 const { Title } = Typography;
@@ -50,7 +51,8 @@ const ApartmentBuildingForm: React.FC = () => {
       notification.success({ message: 'Main image uploaded successfully' });
       onSuccess?.(fileUrl);
     } catch (error) {
-      notification.error({ message: 'Failed to upload main image' });
+      const errorMessage = getErrorMessage(error, 'Failed to upload main image');
+      notification.error({ message: errorMessage });
       onError?.(error as Error);
     } finally {
       setUploadingMainImage(false);
@@ -74,12 +76,27 @@ const ApartmentBuildingForm: React.FC = () => {
       });
       
       const fileUrl = await fileApi.upload(file);
-      const newImages = [...images];
-      newImages[index] = { ...newImages[index], src: fileUrl };
-      setImages(newImages);
-      notification.success({ message: 'Image uploaded successfully' });
-    } catch {
-      notification.error({ message: 'Failed to upload image' });
+      if (fileUrl) {
+        setImages(prevImages => {
+          const newImages = [...prevImages];
+          if (!newImages[index]) {
+            newImages[index] = {
+              id: null,
+              name: null,
+              description: null,
+              src: null,
+            };
+          }
+          newImages[index] = { ...newImages[index], src: fileUrl };
+          return newImages;
+        });
+        notification.success({ message: 'Image uploaded successfully' });
+      } else {
+        notification.error({ message: 'Failed to get image URL from response' });
+      }
+    } catch (error) {
+      const errorMessage = getErrorMessage(error, 'Failed to upload image');
+      notification.error({ message: errorMessage });
     } finally {
       setUploadingImages(prev => {
         const newArray = [...prev];
@@ -127,8 +144,9 @@ const ApartmentBuildingForm: React.FC = () => {
         notification.warning({ message: "Apartment building created but unexpected response" });
         navigate("/apartment-buildings");
       }
-    } catch {
-      notification.error({ message: "Failed to create apartment building" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to create apartment building");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -400,8 +418,8 @@ const ApartmentBuildingForm: React.FC = () => {
             {images.map((image, index) => (
               <Card key={index} size="small" style={{ marginBottom: 16 }}>
                 <div style={{ display: "grid", gap: 16, alignItems: "start" }}>
-                  {image.src && (
-                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                  {image.src && image.src.trim() !== '' && (
+                    <div style={{ position: 'relative', display: 'inline-block', marginBottom: 8 }}>
                       <Image
                         src={image.src}
                         alt={`Additional image ${index + 1} preview`}
@@ -412,6 +430,7 @@ const ApartmentBuildingForm: React.FC = () => {
                           border: '1px solid #d9d9d9',
                           borderRadius: '6px'
                         }}
+                        preview={true}
                       />
                     </div>
                   )}

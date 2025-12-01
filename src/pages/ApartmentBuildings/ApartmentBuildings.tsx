@@ -1,42 +1,88 @@
-import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, Space, Tag, App, Breadcrumb } from "antd";
-import { PlusOutlined, HomeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { Table, Typography, Button, Space, Tag, App, Breadcrumb, Input } from "antd";
+import { PlusOutlined, HomeOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { apartmentBuildingApi } from "../../api/apartmentBuildingApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { ApartmentBuildingDto } from "../../types/apartmentBuilding";
+import type { FilterQuery, SortQuery } from "../../types/apiResponse";
+import { FilterOperator, SortDirection } from "../../types/apiResponse";
+import type { ColumnType } from "antd/es/table";
 
 const { Title } = Typography;
+const { Search } = Input;
 
 const ApartmentBuildings: React.FC = () => {
   const { notification } = App.useApp();
   const [apartmentBuildings, setApartmentBuildings] = useState<ApartmentBuildingDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const hasFetchedRef = useRef(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sorts, setSorts] = useState<SortQuery[]>([]);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const requestKeyRef = useRef<string>("");
 
-  useEffect(() => {
-    if (hasFetchedRef.current) {
+  const fetchApartmentBuildings = useCallback(async () => {
+    const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
+    
+    if (requestKeyRef.current === requestKey) {
       return;
     }
-    hasFetchedRef.current = true;
-    fetchApartmentBuildings();
-  }, []);
 
-  const fetchApartmentBuildings = async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    requestKeyRef.current = requestKey;
+
     try {
       setLoading(true);
-      const response = await apartmentBuildingApi.getApartmentBuildings();
-      if (response.data) {
+      const filters: FilterQuery[] = [];
+      
+      if (searchTerm) {
+        filters.push({
+          Code: "name",
+          Operator: FilterOperator.Contains,
+          Value: searchTerm,
+        });
+      }
+
+      const response = await apartmentBuildingApi.getApartmentBuildings({
+        filters: filters.length > 0 ? filters : undefined,
+        sorts: sorts.length > 0 ? sorts : undefined,
+        page: currentPage,
+        limit: pageSize,
+      });
+      
+      if (!abortController.signal.aborted && requestKeyRef.current === requestKey && response.data) {
         setApartmentBuildings(response.data);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch apartment buildings" });
+    } catch (error: unknown) {
+      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
+        const errorMessage = getErrorMessage(error, "Failed to fetch apartment buildings");
+        notification.error({ message: errorMessage });
+      }
     } finally {
-      setLoading(false);
+      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
+        setLoading(false);
+      }
     }
-  };
+  }, [searchTerm, sorts, currentPage, pageSize]);
+
+  useEffect(() => {
+    fetchApartmentBuildings();
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchApartmentBuildings]);
 
   const handleEdit = (id: string) => {
     navigate(`/${apartmentBuildingId}/apartment-buildings/edit/${id}`);
@@ -46,9 +92,34 @@ const ApartmentBuildings: React.FC = () => {
     try {
       notification.success({ message: "Apartment building deleted successfully!" });
       fetchApartmentBuildings();
-    } catch {
-      notification.error({ message: "Failed to delete apartment building" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to delete apartment building");
+      notification.error({ message: errorMessage });
     }
+  };
+
+  const handleTableChange = (
+    _pagination: any,
+    _filters: any,
+    sorter: any
+  ) => {
+    if (sorter && sorter.columnKey) {
+      const newSorts: SortQuery[] = [
+        {
+          Code: sorter.columnKey,
+          Direction: sorter.order === "ascend" ? SortDirection.Ascending : SortDirection.Descending,
+        },
+      ];
+      setSorts(newSorts);
+      setCurrentPage(1);
+    } else {
+      setSorts([]);
+    }
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
   };
 
   const getStatusColor = (status: string | null) => {
@@ -64,39 +135,51 @@ const ApartmentBuildings: React.FC = () => {
     }
   };
 
-  const columns = [
+  const columns: ColumnType<ApartmentBuildingDto>[] = [
     {
       title: "Name",
       dataIndex: "name",
       key: "name",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Code",
       dataIndex: "code",
       key: "code",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
     },
     {
       title: "Address",
       dataIndex: "address",
       key: "address",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
       render: (text: string) => text || "N/A",
     },
     {
       title: "Contact Email",
       dataIndex: "contactEmail",
       key: "contactEmail",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
       render: (text: string) => text || "N/A",
     },
     {
       title: "Contact Phone",
       dataIndex: "contactPhone",
       key: "contactPhone",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
       render: (text: string) => text || "N/A",
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
       render: (status: string) => (
         <Tag color={getStatusColor(status)}>
           {status || "Unknown"}
@@ -162,18 +245,40 @@ const ApartmentBuildings: React.FC = () => {
           Add New Apartment Building
         </Button>
       </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <Search
+          placeholder="Search by name"
+          allowClear
+          enterButton={<SearchOutlined />}
+          size="large"
+          onSearch={handleSearch}
+          onChange={(e) => {
+            if (!e.target.value) {
+              handleSearch("");
+            }
+          }}
+          style={{ maxWidth: 400 }}
+        />
+      </div>
       
       <Table
         rowKey="id"
         dataSource={apartmentBuildings}
         columns={columns}
         loading={loading}
+        onChange={handleTableChange}
         pagination={{
-          pageSize: 10,
+          current: currentPage,
+          pageSize: pageSize,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) => 
             `${range[0]}-${range[1]} of ${total} apartment buildings`,
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            setPageSize(size);
+          },
         }}
         scroll={{ x: 1200 }}
       />

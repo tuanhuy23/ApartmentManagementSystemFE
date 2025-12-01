@@ -24,8 +24,8 @@ export const accountApi = {
   refreshToken: (refreshToken: RefreshTokenRequestDto): Promise<ApiResponse<TokenResponseDto>> => 
     axiosClient.post("/account/refresh-token", refreshToken),
   
-  logout: (refreshToken: string): Promise<ApiResponse<TokenResponseDto>> => 
-    axiosClient.post("/account/logout", { refreshToken }),
+  logout: (refreshToken: RefreshTokenRequestDto): Promise<ApiResponse<TokenResponseDto>> => 
+    axiosClient.post("/account/logout", refreshToken),
   
   changePassword: (passwordData: ChangePasswordRequestDto): Promise<ApiResponse<ChangePasswordResponseDto>> => 
     axiosClient.post("/account/change-password", passwordData),

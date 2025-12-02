@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Table, Typography, Button, Space, Tag, App, Breadcrumb, Input } from "antd";
 import { PlusOutlined, HomeOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
@@ -23,23 +23,17 @@ const ApartmentBuildings: React.FC = () => {
   const [sorts, setSorts] = useState<SortQuery[]>([]);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const requestKeyRef = useRef<string>("");
+  const hasFetchedApartmentBuildingsRef = useRef(false);
+  const lastRequestKeyRef = useRef<string>("");
 
-  const fetchApartmentBuildings = useCallback(async () => {
+  const fetchApartmentBuildings = async () => {
     const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
     
-    if (requestKeyRef.current === requestKey) {
+    if (lastRequestKeyRef.current === requestKey) {
       return;
     }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    requestKeyRef.current = requestKey;
+    
+    lastRequestKeyRef.current = requestKey;
 
     try {
       setLoading(true);
@@ -60,29 +54,24 @@ const ApartmentBuildings: React.FC = () => {
         limit: pageSize,
       });
       
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey && response.data) {
+      if (response.data) {
         setApartmentBuildings(response.data);
       }
-    } catch (error: unknown) {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        const errorMessage = getErrorMessage(error, "Failed to fetch apartment buildings");
-        notification.error({ message: errorMessage });
-      }
+    } catch {
+      notification.error({ message: "Failed to fetch apartment buildings" });
     } finally {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [searchTerm, sorts, currentPage, pageSize]);
+  };
 
   useEffect(() => {
-    fetchApartmentBuildings();
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchApartmentBuildings]);
+    if (!hasFetchedApartmentBuildingsRef.current) {
+      hasFetchedApartmentBuildingsRef.current = true;
+      fetchApartmentBuildings();
+    } else {
+      fetchApartmentBuildings();
+    }
+  }, [searchTerm, sorts, currentPage, pageSize]);
 
   const handleEdit = (id: string) => {
     navigate(`/${apartmentBuildingId}/apartment-buildings/edit/${id}`);

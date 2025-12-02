@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Table, Typography, Button, Space, App, Breadcrumb, Input } from "antd";
 import { PlusOutlined, HomeOutlined, EyeOutlined, DeleteOutlined, SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
@@ -22,24 +22,9 @@ const Apartments: React.FC = () => {
   const [sorts, setSorts] = useState<SortQuery[]>([]);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const requestKeyRef = useRef<string>("");
+  const hasFetchedApartmentsRef = useRef(false);
 
-  const fetchApartments = useCallback(async () => {
-    const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
-    
-    if (requestKeyRef.current === requestKey) {
-      return;
-    }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    requestKeyRef.current = requestKey;
-
+  const fetchApartments = async () => {
     try {
       setLoading(true);
       const filters: FilterQuery[] = [];
@@ -59,29 +44,24 @@ const Apartments: React.FC = () => {
         limit: pageSize,
       });
       
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey && response.data) {
+      if (response.data) {
         setApartments(response.data);
       }
-    } catch (error: unknown) {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        const errorMessage = getErrorMessage(error, "Failed to fetch apartments");
-        notification.error({ message: errorMessage });
-      }
+    } catch {
+      notification.error({ message: "Failed to fetch apartments" });
     } finally {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [searchTerm, sorts, currentPage, pageSize]);
+  };
 
   useEffect(() => {
-    fetchApartments();
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchApartments]);
+    if (!hasFetchedApartmentsRef.current) {
+      hasFetchedApartmentsRef.current = true;
+      fetchApartments();
+    } else {
+      fetchApartments();
+    }
+  }, [searchTerm, sorts, currentPage, pageSize]);
 
   const handleViewDetail = (apartmentId: string) => {
     navigate(`/${apartmentBuildingId}/apartments/${apartmentId}`);

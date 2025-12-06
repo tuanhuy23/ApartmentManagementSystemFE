@@ -37,7 +37,6 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
       try {
         await accountApi.logout(refreshToken);
       } catch (error) {
-        console.error("Logout API error:", error);
       }
     }
     tokenStorage.removeToken();

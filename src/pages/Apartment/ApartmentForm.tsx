@@ -76,7 +76,6 @@ const ApartmentForm: React.FC = () => {
       notification.success({ message: "Apartment created successfully!" });
       navigate(`/${apartmentBuildingId}/apartments`);
     } catch (error: any) {
-      console.error("Error saving apartment:", error);
       const errorMessage = getErrorMessage(error, "Failed to save apartment");
       notification.error({ message: errorMessage });
     } finally {

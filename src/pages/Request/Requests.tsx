@@ -158,8 +158,6 @@ const Requests: React.FC = () => {
             type="text"
             icon={<DeleteOutlined />}
             onClick={() => {
-              // TODO: Implement delete functionality
-              console.log("Delete request:", record.id);
             }}
             style={{ color: "#000" }}
           />

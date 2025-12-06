@@ -115,7 +115,6 @@ const RequestDetail: React.FC = () => {
         setStaffUsers(response.data.filter(u => u.roleName?.toLowerCase().includes("technical") || u.roleName?.toLowerCase().includes("staff")));
       }
     } catch {
-      // Ignore error
     }
   }, [apartmentBuildingId]);
 

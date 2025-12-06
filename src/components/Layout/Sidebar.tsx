@@ -9,9 +9,11 @@ import {
   CalendarOutlined,
   NotificationOutlined,
   QuestionCircleOutlined,
+  SafetyOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
+import { useAuth } from "../../hooks/useAuth";
 
 const { Sider } = Layout;
 
@@ -22,6 +24,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   
   const pathParts = location.pathname.split('/').filter(Boolean);
   const apartmentBuildingId = pathParts[0] && pathParts[0] !== 'login' && pathParts[0] !== 'change-password' && pathParts[0] !== 'profile'
@@ -34,48 +37,74 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
     return `/${apartmentBuildingId}${path}`;
   };
 
-  const menuItems = [
+  const hasPermission = (permissionName: string): boolean => {
+    if (!user?.permissions || user.permissions.length === 0) {
+      return false;
+    }
+    return user.permissions.includes(`${permissionName}.Read`) || 
+           user.permissions.includes(`${permissionName}.ReadWrite`);
+  };
+
+  const allMenuItems = [
     {
       key: "/",
       icon: <HomeOutlined />,
       label: "Dashboard",
+      permission: null,
     },
     {
       key: getPathWithApartmentId("/users"),
       icon: <UserOutlined />,
       label: "Users",
+      permission: "Permissions.UserPermissions",
+    },
+    {
+      key: getPathWithApartmentId("/roles"),
+      icon: <SafetyOutlined />,
+      label: "Roles",
+      permission: "Permissions.RolePermissions",
     },
     {
       key: getPathWithApartmentId("/apartment-buildings"),
       icon: <BuildOutlined />,
       label: "Apartment Buildings",
+      permission: "Permissions.ApartmentBuildingPermissions",
     },
     {
       key: getPathWithApartmentId("/apartments"),
       icon: <ApartmentOutlined />,
       label: "Apartments",
+      permission: "Permissions.ApartmentPermissions",
     },
     {
       key: getPathWithApartmentId("/fee-configuration"),
       icon: <DollarOutlined />,
       label: "Fee Configuration",
+      permission: "Permissions.FeeConfigurationPermissions",
     },
     {
       key: getPathWithApartmentId("/billing-cycle"),
       icon: <CalendarOutlined />,
       label: "Billing Cycle",
+      permission: "Permissions.FeeConfigurationPermissions",
     },
     {
       key: getPathWithApartmentId("/announcements"),
       icon: <NotificationOutlined />,
       label: "Announcements",
+      permission: "Permissions.NotificationPermissions",
     },
     {
       key: getPathWithApartmentId("/requests"),
       icon: <QuestionCircleOutlined />,
       label: "Requests",
+      permission: "Permissions.RequestPermissions",
     },
   ];
+
+  const menuItems = allMenuItems
+    .filter(item => item.permission === null || hasPermission(item.permission))
+    .map(({ permission, ...item }) => item);
 
   const handleMenuClick = ({ key }: { key: string }) => {
     navigate(key);

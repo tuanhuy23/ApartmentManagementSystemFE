@@ -57,8 +57,9 @@ const ApartmentBuildings: React.FC = () => {
       if (response.data) {
         setApartmentBuildings(response.data);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch apartment buildings" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch apartment buildings");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -129,13 +130,6 @@ const ApartmentBuildings: React.FC = () => {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      sorter: true,
-      sortDirections: ["ascend", "descend"],
-    },
-    {
-      title: "Code",
-      dataIndex: "code",
-      key: "code",
       sorter: true,
       sortDirections: ["ascend", "descend"],
     },

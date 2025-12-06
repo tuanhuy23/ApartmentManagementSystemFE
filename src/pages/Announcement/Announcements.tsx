@@ -156,8 +156,6 @@ const Announcements: React.FC = () => {
             type="text"
             icon={<DeleteOutlined style={{ color: "#000" }} />}
             onClick={() => {
-              // TODO: Implement delete functionality
-              console.log("Delete announcement:", record.id);
             }}
             style={{ color: "#000" }}
           />

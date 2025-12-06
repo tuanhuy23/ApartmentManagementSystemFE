@@ -250,7 +250,6 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
                       }, 0);
                     }
                   } catch (error) {
-                    console.error("Error opening quantity modal:", error);
                     notification.error({ message: "Failed to open quantity rate configuration" });
                   }
                 }}
@@ -289,7 +288,6 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
                       }, 0);
                     }
                   } catch (error) {
-                    console.error("Error opening tiered modal:", error);
                     notification.error({ message: "Failed to open tiered rate configuration" });
                   }
                 }}

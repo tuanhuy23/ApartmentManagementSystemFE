@@ -2,6 +2,7 @@ export interface RoleDto {
   roleId: string;
   roleName: string;
   permissions: PermissionInfo[];
+  appartmentBuildingId: string;
 }
 
 export interface PermissionInfo {

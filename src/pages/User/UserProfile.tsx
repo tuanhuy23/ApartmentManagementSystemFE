@@ -95,7 +95,7 @@ const UserProfile: React.FC = () => {
               <div>
                 <Text strong>Role:</Text>
                 <br />
-                <Text>{profile?.role || "N/A"}</Text>
+                <Text>{profile?.roleName || "N/A"}</Text>
               </div>
             </Space>
             

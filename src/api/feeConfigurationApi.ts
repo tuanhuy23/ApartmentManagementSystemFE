@@ -41,5 +41,8 @@ export const feeConfigurationApi = {
 
   update: (data: CreateOrUpdateFeeTypeDto): Promise<ApiResponse<void>> =>
     axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/fee-configuration`, data),
+
+  delete: (ids: string[]): Promise<ApiResponse<void>> =>
+    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/fee-configuration`, { data: ids }),
 };
 

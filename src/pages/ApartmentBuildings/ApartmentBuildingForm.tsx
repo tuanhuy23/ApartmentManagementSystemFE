@@ -1,13 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Card, Typography, Select, Upload, Image, App } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeftOutlined, SaveOutlined, PlusOutlined, MinusCircleOutlined, UploadOutlined, LoadingOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
 import { apartmentBuildingApi } from "../../api/apartmentBuildingApi";
 import { fileApi } from "../../api/fileApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { getErrorMessage } from "../../utils/errorHandler";
-import type { CreateApartmentBuildingDto, ApartmentBuildingImageDto } from "../../types/apartmentBuilding";
+import type { CreateOrUpdateApartmentBuildingDto, ApartmentBuildingImageDto } from "../../types/apartmentBuilding";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -15,7 +15,6 @@ const { TextArea } = Input;
 
 interface FormValues {
   name: string;
-  code: string;
   address: string;
   description?: string;
   contactEmail: string;
@@ -33,12 +32,15 @@ const ApartmentBuildingForm: React.FC = () => {
   const { notification } = App.useApp();
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
   const apartmentBuildingId = useApartmentBuildingId();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [uploadingMainImage, setUploadingMainImage] = useState(false);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [images, setImages] = useState<ApartmentBuildingImageDto[]>([]);
   const [uploadingImages, setUploadingImages] = useState<boolean[]>([]);
+  const isEditMode = !!id;
 
   const handleMainImageUpload: UploadProps["customRequest"] = async (options) => {
     const { file, onSuccess, onError } = options;
@@ -109,13 +111,56 @@ const ApartmentBuildingForm: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (isEditMode && id) {
+      fetchApartmentBuilding();
+    }
+  }, [id, isEditMode]);
+
+  const fetchApartmentBuilding = async () => {
+    if (!id) return;
+    
+    try {
+      setFetching(true);
+      const response = await apartmentBuildingApi.getById(id);
+      if (response.data) {
+        const data = response.data;
+        form.setFieldsValue({
+          name: data.name || "",
+          address: data.address || "",
+          description: data.description || "",
+          contactEmail: data.contactEmail || "",
+          contactPhone: data.contactPhone || "",
+          currencyUnit: data.currencyUnit || "VND",
+          apartmentBuildingImgUrl: data.apartmentBuildingImgUrl || "",
+        });
+        
+        if (data.apartmentBuildingImgUrl) {
+          setMainImagePreview(data.apartmentBuildingImgUrl);
+        }
+        
+        if (data.images && data.images.length > 0) {
+          setImages(data.images);
+          setUploadingImages(new Array(data.images.length).fill(false));
+        }
+      }
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch apartment building");
+      notification.error({ message: errorMessage });
+      navigate(`/${apartmentBuildingId}/apartment-buildings`);
+    } finally {
+      setFetching(false);
+    }
+  };
+
   const handleSubmit = async (values: FormValues) => {
     try {
       setLoading(true);
       
-      const apartmentBuildingData: CreateApartmentBuildingDto = {
+      const apartmentBuildingData: CreateOrUpdateApartmentBuildingDto = {
+        id: isEditMode ? id : null,
         name: values.name,
-        code: values.code,
+        code: null,
         address: values.address,
         description: values.description || null,
         contactEmail: values.contactEmail,
@@ -130,22 +175,38 @@ const ApartmentBuildingForm: React.FC = () => {
         managementPassword: values.managementPassword,
       };
 
-      const response = await apartmentBuildingApi.createApartmentBuilding(apartmentBuildingData);
+      let response;
+      if (isEditMode) {
+        response = await apartmentBuildingApi.updateApartmentBuilding(apartmentBuildingData);
+      } else {
+        response = await apartmentBuildingApi.createApartmentBuilding(apartmentBuildingData);
+      }
       
       if (response && response.status === 200) {
         notification.success({ 
-          message: "Apartment building created successfully!",
+          message: isEditMode 
+            ? "Apartment building updated successfully!" 
+            : "Apartment building created successfully!",
           duration: 3,
         });
         setTimeout(() => {
           navigate(`/${apartmentBuildingId}/apartment-buildings`);
         }, 1500);
       } else {
-        notification.warning({ message: "Apartment building created but unexpected response" });
-        navigate("/apartment-buildings");
+        notification.warning({ 
+          message: isEditMode 
+            ? "Apartment building updated but unexpected response" 
+            : "Apartment building created but unexpected response" 
+        });
+        navigate(`/${apartmentBuildingId}/apartment-buildings`);
       }
     } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error, "Failed to create apartment building");
+      const errorMessage = getErrorMessage(
+        error, 
+        isEditMode 
+          ? "Failed to update apartment building" 
+          : "Failed to create apartment building"
+      );
       notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
@@ -153,7 +214,7 @@ const ApartmentBuildingForm: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate("/apartment-buildings");
+    navigate(`/${apartmentBuildingId}/apartment-buildings`);
   };
 
   const addImage = () => {
@@ -190,7 +251,7 @@ const ApartmentBuildingForm: React.FC = () => {
           marginBottom: 24 
         }}>
           <Title level={2}>
-            Create New Apartment Building
+            {isEditMode ? "Edit Apartment Building" : "Create New Apartment Building"}
           </Title>
           <Button icon={<ArrowLeftOutlined />} onClick={handleBack}>
             Back to Apartment Buildings
@@ -203,6 +264,11 @@ const ApartmentBuildingForm: React.FC = () => {
           onFinish={handleSubmit}
           autoComplete="off"
         >
+          {fetching && (
+            <div style={{ textAlign: "center", padding: "20px" }}>
+              Loading...
+            </div>
+          )}
           <Title level={4}>Basic Information</Title>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
             <Form.Item
@@ -214,17 +280,6 @@ const ApartmentBuildingForm: React.FC = () => {
               ]}
             >
               <Input placeholder="Enter apartment building name" />
-            </Form.Item>
-
-            <Form.Item
-              label="Code"
-              name="code"
-              rules={[
-                { required: true, message: "Please input apartment building code!" },
-                { min: 2, message: "Code must be at least 2 characters!" }
-              ]}
-            >
-              <Input placeholder="Enter apartment building code" />
             </Form.Item>
 
             <Form.Item
@@ -267,10 +322,21 @@ const ApartmentBuildingForm: React.FC = () => {
               name="contactPhone"
               rules={[
                 { required: true, message: "Please input contact phone!" },
-                { pattern: /^[0-9+\-\s()]+$/, message: "Please enter a valid phone number!" }
+                { 
+                  pattern: /^[0-9]{10}$/, 
+                  message: "Phone number must be exactly 10 digits!" 
+                }
               ]}
             >
-              <Input placeholder="Enter contact phone" />
+              <Input 
+                placeholder="Enter contact phone (10 digits)" 
+                maxLength={10}
+                onKeyPress={(e) => {
+                  if (!/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
             </Form.Item>
           </div>
 
@@ -386,10 +452,21 @@ const ApartmentBuildingForm: React.FC = () => {
               name="managementPhoneNumber"
               rules={[
                 { required: true, message: "Please input management phone number!" },
-                { pattern: /^[0-9+\-\s()]+$/, message: "Please enter a valid phone number!" }
+                { 
+                  pattern: /^[0-9]{10}$/, 
+                  message: "Phone number must be exactly 10 digits!" 
+                }
               ]}
             >
-              <Input placeholder="Enter management phone number" />
+              <Input 
+                placeholder="Enter management phone number (10 digits)" 
+                maxLength={10}
+                onKeyPress={(e) => {
+                  if (!/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
             </Form.Item>
 
             <Form.Item
@@ -397,7 +474,32 @@ const ApartmentBuildingForm: React.FC = () => {
               name="managementPassword"
               rules={[
                 { required: true, message: "Please input management password!" },
-                { min: 6, message: "Password must be at least 6 characters!" }
+                { min: 8, message: "Password must be at least 8 characters!" },
+                {
+                  validator: (_, value) => {
+                    if (!value) {
+                      return Promise.resolve();
+                    }
+                    const hasUpperCase = /[A-Z]/.test(value);
+                    const hasLowerCase = /[a-z]/.test(value);
+                    const hasNumber = /[0-9]/.test(value);
+                    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
+                    
+                    if (!hasUpperCase) {
+                      return Promise.reject(new Error("Password must contain at least 1 uppercase letter!"));
+                    }
+                    if (!hasLowerCase) {
+                      return Promise.reject(new Error("Password must contain at least 1 lowercase letter!"));
+                    }
+                    if (!hasNumber) {
+                      return Promise.reject(new Error("Password must contain at least 1 number!"));
+                    }
+                    if (!hasSpecialChar) {
+                      return Promise.reject(new Error("Password must contain at least 1 special character!"));
+                    }
+                    return Promise.resolve();
+                  }
+                }
               ]}
             >
               <Input.Password placeholder="Enter management password" />
@@ -498,10 +600,11 @@ const ApartmentBuildingForm: React.FC = () => {
               type="primary" 
               htmlType="submit" 
               icon={<SaveOutlined />}
-              loading={loading}
+              loading={loading || fetching}
               size="large"
+              disabled={fetching}
             >
-              Create Apartment Building
+              {isEditMode ? "Update Apartment Building" : "Create Apartment Building"}
             </Button>
           </Form.Item>
         </Form>

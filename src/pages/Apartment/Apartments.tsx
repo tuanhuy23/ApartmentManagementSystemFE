@@ -47,8 +47,9 @@ const Apartments: React.FC = () => {
       if (response.data) {
         setApartments(response.data);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch apartments" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch apartments");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }

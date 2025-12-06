@@ -1,7 +1,8 @@
 import axiosClient from "./axiosClient";
 import type { 
   ApartmentBuildingDto, 
-  CreateApartmentBuildingDto 
+  CreateOrUpdateApartmentBuildingDto,
+  UpdateStatusApartmentBuildingDto
 } from "../types/apartmentBuilding";
 import type { ApiResponse, FilterQuery, SortQuery } from "../types/apiResponse";
 
@@ -32,6 +33,18 @@ export const apartmentBuildingApi = {
     return axiosClient.get(url, { headers });
   },
   
-  createApartmentBuilding: (data: CreateApartmentBuildingDto): Promise<ApiResponse<void>> => 
+  getById: (id: string): Promise<ApiResponse<ApartmentBuildingDto>> =>
+    axiosClient.get(`/apartment-building/${id}`),
+
+  createApartmentBuilding: (data: CreateOrUpdateApartmentBuildingDto): Promise<ApiResponse<void>> => 
     axiosClient.post(`/apartment-building`, data),
+
+  updateApartmentBuilding: (data: CreateOrUpdateApartmentBuildingDto): Promise<ApiResponse<void>> => 
+    axiosClient.put(`/apartment-building`, data),
+
+  deleteApartmentBuilding: (ids: string[]): Promise<ApiResponse<void>> => 
+    axiosClient.delete(`/apartment-building`, { data: ids }),
+
+  updateStatus: (id: string, data: UpdateStatusApartmentBuildingDto): Promise<ApiResponse<void>> =>
+    axiosClient.put(`/apartment-building/${id}/status`, data),
 };

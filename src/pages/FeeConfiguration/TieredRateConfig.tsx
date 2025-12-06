@@ -91,7 +91,6 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
   };
 
   const handleSave = () => {
-    // Ensure only one active config
     const activeConfigs = rateConfigs.filter((c) => c.status === "ACTIVE");
     if (activeConfigs.length > 1) {
       notification.warning({ message: "Only one config can be active at a time" });
@@ -225,7 +224,6 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
         </div>
       </Drawer>
 
-      {/* Create New Config Drawer */}
       <Drawer
         title={
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -331,7 +329,6 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
         </Form>
       </Drawer>
 
-      {/* Tier Details Modal */}
       {editingConfig && (
         <TierDetails
           open={isTierDetailsOpen}

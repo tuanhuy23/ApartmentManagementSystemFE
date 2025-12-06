@@ -35,7 +35,16 @@ export const parkingApi = {
     return axiosClient.get(url, { headers });
   },
 
+  getById: (id: string): Promise<ApiResponse<ParkingRegistrationDto>> =>
+    axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/parking-registration/${id}`),
+
   create: (data: ParkingRegistrationDto): Promise<ApiResponse<void>> =>
     axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/parking-registration`, data),
+
+  update: (data: ParkingRegistrationDto): Promise<ApiResponse<void>> =>
+    axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/parking-registration`, data),
+
+  delete: (ids: string[]): Promise<ApiResponse<void>> =>
+    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/parking-registration`, { data: ids }),
 };
 

@@ -47,5 +47,11 @@ export const requestApi = {
 
   updateFeedback: (data: FeedbackDto): Promise<ApiResponse<void>> =>
     axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/request/feedback`, data),
+
+  delete: (ids: string[]): Promise<ApiResponse<void>> =>
+    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/request`, { data: ids }),
+
+  deleteFeedback: (ids: string[]): Promise<ApiResponse<void>> =>
+    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/request/feedback`, { data: ids }),
 };
 

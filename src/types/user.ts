@@ -47,6 +47,8 @@ export interface AccountInfoResponseDto {
     role: string;
     roleName: string;
     apartmentBuildingId: string;
+    apartmentId: string;
+    isActive: string;
     permissions: string[];
 }
 

@@ -30,15 +30,16 @@ export const announcementApi = {
     return axiosClient.get(url, { headers });
   },
 
-  getById: (id: string, requestId?: string): Promise<ApiResponse<AnnouncementDto>> => {
-    const params = requestId ? `?requestId=${requestId}` : "";
-    return axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/announcement/${id}${params}`);
-  },
+  getById: (id: string): Promise<ApiResponse<AnnouncementDto>> =>
+    axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/announcement/${id}`),
 
   create: (data: AnnouncementDto): Promise<ApiResponse<void>> =>
     axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/announcement`, data),
 
   update: (data: AnnouncementDto): Promise<ApiResponse<void>> =>
     axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/announcement`, data),
+
+  delete: (ids: string[]): Promise<ApiResponse<void>> =>
+    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/announcement`, { data: ids }),
 };
 

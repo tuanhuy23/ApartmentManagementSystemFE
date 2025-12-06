@@ -17,10 +17,12 @@ import AnnouncementForm from "./pages/Announcement/AnnouncementForm";
 import Requests from "./pages/Request/Requests";
 import RequestForm from "./pages/Request/RequestForm";
 import RequestDetail from "./pages/Request/RequestDetail";
+import Roles from "./pages/Roles/Roles";
 import Forbidden403 from "./pages/Error/Forbidden403";
 import NotFound404 from "./pages/Error/NotFound404";
 import AuthGuard from "./components/AuthGuard";
 import ApartmentBuildingGuard from "./components/ApartmentBuildingGuard";
+import PermissionGuard from "./components/PermissionGuard";
 
 export default function AppRoutes() {
   return (
@@ -47,112 +49,153 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/users" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <Users />
+            <PermissionGuard permission="Permissions.UserPermissions">
+              <Users />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/users/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <UserForm />
+            <PermissionGuard permission="Permissions.UserPermissions">
+              <UserForm />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/users/edit/:userId" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <UserForm />
+            <PermissionGuard permission="Permissions.UserPermissions">
+              <UserForm />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/apartment-buildings" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <ApartmentBuildings />
+            <PermissionGuard permission="Permissions.ApartmentBuildingPermissions">
+              <ApartmentBuildings />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/apartment-buildings/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <ApartmentBuildingForm />
+            <PermissionGuard permission="Permissions.ApartmentBuildingPermissions">
+              <ApartmentBuildingForm />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/apartment-buildings/edit/:id" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <ApartmentBuildingForm />
+            <PermissionGuard permission="Permissions.ApartmentBuildingPermissions">
+              <ApartmentBuildingForm />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/apartments" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <Apartments />
+            <PermissionGuard permission="Permissions.ApartmentPermissions">
+              <Apartments />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/apartments/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <ApartmentForm />
+            <PermissionGuard permission="Permissions.ApartmentPermissions">
+              <ApartmentForm />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/apartments/:apartmentId" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <ApartmentDetail />
+            <PermissionGuard permission="Permissions.ApartmentPermissions">
+              <ApartmentDetail />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/fee-configuration" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <FeeConfiguration />
+            <PermissionGuard permission="Permissions.FeeConfigurationPermissions">
+              <FeeConfiguration />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/billing-cycle" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <BillingCycleSetting />
+            <PermissionGuard permission="Permissions.FeeConfigurationPermissions">
+              <BillingCycleSetting />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/announcements" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <Announcements />
+            <PermissionGuard permission="Permissions.NotificationPermissions">
+              <Announcements />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/announcements/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <AnnouncementForm />
+            <PermissionGuard permission="Permissions.NotificationPermissions">
+              <AnnouncementForm />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/requests" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <Requests />
+            <PermissionGuard permission="Permissions.RequestPermissions">
+              <Requests />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/requests/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <RequestForm />
+            <PermissionGuard permission="Permissions.RequestPermissions">
+              <RequestForm />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
       <Route path="/:apartmentBuildingId/requests/:id" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <RequestDetail />
+            <PermissionGuard permission="Permissions.RequestPermissions">
+              <RequestDetail />
+            </PermissionGuard>
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/roles" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <PermissionGuard permission="Permissions.RolePermissions">
+              <Roles />
+            </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />

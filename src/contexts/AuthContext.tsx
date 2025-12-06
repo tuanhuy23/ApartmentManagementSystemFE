@@ -59,7 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(response.data);
         }
       } catch {
-        // ignore
       }
     })();
   };

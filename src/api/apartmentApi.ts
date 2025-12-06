@@ -68,5 +68,17 @@ export const apartmentApi = {
 
   getResidentDetail: (apartmentId: string, id: string): Promise<ApiResponse<ResidentDto>> =>
     axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/apartment/${apartmentId}/residents/detail/${id}`),
+
+  update: (data: CreateOrUpdateApartmentDto): Promise<ApiResponse<void>> =>
+    axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/apartment`, data),
+
+  delete: (ids: string[]): Promise<ApiResponse<void>> =>
+    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/apartment`, { data: ids }),
+
+  updateResident: (apartmentId: string, data: ResidentDto): Promise<ApiResponse<void>> =>
+    axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/apartment/${apartmentId}/residents`, data),
+
+  deleteResident: (apartmentId: string, ids: string[]): Promise<ApiResponse<void>> =>
+    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/apartment/${apartmentId}/residents`, { data: ids }),
 };
 

@@ -68,5 +68,8 @@ export const feeApi = {
     
     return axiosClient.get(url, { headers });
   },
+
+  delete: (ids: string[]): Promise<ApiResponse<void>> =>
+    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/fee`, { data: ids }),
 };
 

@@ -8,6 +8,14 @@ export interface ApartmentDto {
   floor: number;
 }
 
+export interface CreateOrUpdateApartmentDto {
+  id: string | null;
+  apartmentBuildingId: string;
+  area: number;
+  name: string;
+  floor: number;
+}
+
 export interface CreateOrUpdateApartmentDto extends Omit<ApartmentDto, "id"> {}
 
 export interface FeeNoticeDto {

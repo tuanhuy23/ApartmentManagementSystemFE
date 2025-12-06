@@ -3,6 +3,7 @@ import { Table, Typography, Button, Space, Tag, App, Breadcrumb } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { feeConfigurationApi } from "../../api/feeConfigurationApi";
+import { getErrorMessage } from "../../utils/errorHandler";
 import type { FeeType, CalculationType, FeeTypeDto } from "../../types/fee";
 import FeeTypeForm from "./FeeTypeForm";
 
@@ -32,8 +33,9 @@ const FeeConfiguration: React.FC = () => {
         const convertedFeeTypes = response.data.map((dto) => convertDtoToFeeType(dto));
         setFeeTypes(convertedFeeTypes);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch fee types" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch fee types");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -88,8 +90,9 @@ const FeeConfiguration: React.FC = () => {
         setEditingFeeType(convertedFeeType);
         setIsModalOpen(true);
       }
-    } catch {
-      notification.error({ message: "Failed to fetch fee type details" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch fee type details");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -116,8 +119,9 @@ const FeeConfiguration: React.FC = () => {
       setEditingFeeType(null);
       hasFetchedFeeTypesRef.current = false;
       fetchFeeTypes();
-    } catch {
-      notification.error({ message: "Failed to save fee type" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to save fee type");
+      notification.error({ message: errorMessage });
     } finally {
       setLoading(false);
     }

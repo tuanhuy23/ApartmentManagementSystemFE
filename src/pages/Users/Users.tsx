@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Table, Typography, Button, Space, App, Breadcrumb, Input } from "antd";
-import { PlusOutlined, UserOutlined, EditOutlined, DeleteOutlined, HomeOutlined, SearchOutlined } from "@ant-design/icons";
+import React, { useEffect, useState, useRef } from "react";
+import { Table, Typography, Button, App, Breadcrumb, Input } from "antd";
+import { PlusOutlined, UserOutlined, EditOutlined, HomeOutlined, SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { userApi } from "../../api/userApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
@@ -22,23 +22,17 @@ const Users: React.FC = () => {
   const [sorts, setSorts] = useState<SortQuery[]>([]);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const requestKeyRef = useRef<string>("");
+  const hasFetchedUsersRef = useRef(false);
+  const lastRequestKeyRef = useRef<string>("");
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = async () => {
     const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
     
-    if (requestKeyRef.current === requestKey) {
+    if (lastRequestKeyRef.current === requestKey) {
       return;
     }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    requestKeyRef.current = requestKey;
+    
+    lastRequestKeyRef.current = requestKey;
 
     try {
       setLoading(true);
@@ -59,43 +53,28 @@ const Users: React.FC = () => {
         limit: pageSize,
       });
       
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey && response.data) {
+      if (response.data) {
         setUsers(response.data);
       }
     } catch (error: unknown) {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        const errorMessage = getErrorMessage(error, "Failed to fetch users");
-        notification.error({ message: errorMessage });
-      }
+      const errorMessage = getErrorMessage(error, "Failed to fetch users");
+      notification.error({ message: errorMessage });
     } finally {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        setLoading(false);
-      }
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!hasFetchedUsersRef.current) {
+      hasFetchedUsersRef.current = true;
+      fetchUsers();
+    } else {
+      fetchUsers();
     }
   }, [searchTerm, sorts, currentPage, pageSize]);
 
-  useEffect(() => {
-    fetchUsers();
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchUsers]);
-
   const handleEdit = (userId: string) => {
     navigate(`/${apartmentBuildingId}/users/edit/${userId}`);
-  };
-
-  const handleDelete = async (userId: string) => {
-    try {
-      await userApi.delete([userId]);
-      notification.success({ message: "User deleted successfully!" });
-      fetchUsers(); // Refresh the list
-    } catch (error: unknown) {
-      const errorMessage = getErrorMessage(error, "Failed to delete user");
-      notification.error({ message: errorMessage });
-    }
   };
 
   const handleTableChange = (
@@ -138,13 +117,6 @@ const Users: React.FC = () => {
       sortDirections: ["ascend", "descend"],
     },
     {
-      title: "Username",
-      dataIndex: "userName",
-      key: "userName",
-      sorter: true,
-      sortDirections: ["ascend", "descend"],
-    },
-    {
       title: "Role",
       dataIndex: "roleName",
       key: "roleName",
@@ -152,9 +124,9 @@ const Users: React.FC = () => {
       sortDirections: ["ascend", "descend"],
     },
     {
-      title: "Apartment",
-      dataIndex: "appartmentName",
-      key: "appartmentName",
+      title: "Apartment Building Name",
+      dataIndex: "appartmentBuildingName",
+      key: "appartmentBuildingName",
       sorter: true,
       sortDirections: ["ascend", "descend"],
       render: (text: string) => text || "N/A",
@@ -170,24 +142,15 @@ const Users: React.FC = () => {
     {
       title: "Actions",
       key: "actions",
-      width: 150,
+      width: 100,
       render: (_: unknown, record: UserDto) => (
-        <Space size="small">
-          <Button 
-            type="text" 
-            size="small" 
-            icon={<EditOutlined style={{ color: "#000" }} />}
-            onClick={() => handleEdit(record.userId!)}
-            style={{ color: "#000" }}
-          />
-          <Button 
-            type="text" 
-            size="small" 
-            icon={<DeleteOutlined style={{ color: "#000" }} />}
-            onClick={() => handleDelete(record.userId!)}
-            style={{ color: "#000" }}
-          />
-        </Space>
+        <Button 
+          type="text" 
+          size="small" 
+          icon={<EditOutlined style={{ color: "#000" }} />}
+          onClick={() => handleEdit(record.userId!)}
+          style={{ color: "#000" }}
+        />
       ),
     },
   ];

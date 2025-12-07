@@ -39,6 +39,20 @@ const ChangePassword: React.FC = () => {
       const response = await accountApi.changePassword(changePasswordData);
 
       if (response && response.status === 200 && response.data?.isSuccess) {
+        const refreshToken = tokenStorage.getRefreshToken();
+        if (refreshToken) {
+          try {
+            const refreshResponse = await accountApi.refreshToken({ refreshToken: refreshToken });
+            if (refreshResponse && refreshResponse.data && refreshResponse.data.accessToken && refreshResponse.data.refreshToken) {
+              tokenStorage.setToken(
+                refreshResponse.data.accessToken,
+                refreshResponse.data.refreshToken
+              );
+            }
+          } catch (refreshError) {
+          }
+        }
+
         notification.success({ message: "Password changed successfully!" });
         login();
         setTimeout(() => {

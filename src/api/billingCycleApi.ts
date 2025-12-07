@@ -1,13 +1,23 @@
 import axiosClient from "./axiosClient";
-import { getApartmentBuildingIdFromToken } from "../utils/token";
+import { getAppartmentBuildingId } from "../utils/token";
 import type { ApiResponse } from "../types/apiResponse";
 import type { BillingCycleSettingDto } from "../types/billingCycle";
 
 export const billingCycleApi = {
-  get: (): Promise<ApiResponse<BillingCycleSettingDto>> =>
-    axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/billing-cycle-setting`),
+  get: (): Promise<ApiResponse<BillingCycleSettingDto>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.get(`/${appartmentBuildingId}/billing-cycle-setting`);
+  },
 
-  create: (data: BillingCycleSettingDto): Promise<ApiResponse<void>> =>
-    axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/billing-cycle-setting`, data),
+  create: (data: BillingCycleSettingDto): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.post(`/${appartmentBuildingId}/billing-cycle-setting`, data);
+  },
 };
 

@@ -10,6 +10,7 @@ export interface PermissionInfo {
   displayName: string;
   selected: boolean;
   type: string;
+  groupName?: string;
 }
 
 export interface DeleteRoleResponse {

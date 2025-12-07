@@ -168,11 +168,11 @@ const ApartmentBuildingForm: React.FC = () => {
         currencyUnit: values.currencyUnit,
         apartmentBuildingImgUrl: values.apartmentBuildingImgUrl || null,
         images: images.length > 0 ? images : null,
-        managementDisplayName: values.managementDisplayName,
-        managementEmail: values.managementEmail,
-        managementUserName: values.managementUserName,
-        managementPhoneNumber: values.managementPhoneNumber,
-        managementPassword: values.managementPassword,
+        managementDisplayName: isEditMode ? null : values.managementDisplayName,
+        managementEmail: isEditMode ? null : values.managementEmail,
+        managementUserName: isEditMode ? null : values.managementUserName,
+        managementPhoneNumber: isEditMode ? null : values.managementPhoneNumber,
+        managementPassword: isEditMode ? null : values.managementPassword,
       };
 
       let response;
@@ -414,97 +414,101 @@ const ApartmentBuildingForm: React.FC = () => {
             </Upload>
           </Form.Item>
 
-          <Title level={4}>Management Information</Title>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-            <Form.Item
-              label="Management Display Name"
-              name="managementDisplayName"
-              rules={[
-                { required: true, message: "Please input management display name!" }
-              ]}
-            >
-              <Input placeholder="Enter management display name" />
-            </Form.Item>
+          {!isEditMode && (
+            <>
+              <Title level={4}>Management Information</Title>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+                <Form.Item
+                  label="Management Display Name"
+                  name="managementDisplayName"
+                  rules={[
+                    { required: true, message: "Please input management display name!" }
+                  ]}
+                >
+                  <Input placeholder="Enter management display name" />
+                </Form.Item>
 
-            <Form.Item
-              label="Management Email"
-              name="managementEmail"
-              rules={[
-                { required: true, message: "Please input management email!" },
-                { type: "email", message: "Please enter a valid email!" }
-              ]}
-            >
-              <Input placeholder="Enter management email" />
-            </Form.Item>
+                <Form.Item
+                  label="Management Email"
+                  name="managementEmail"
+                  rules={[
+                    { required: true, message: "Please input management email!" },
+                    { type: "email", message: "Please enter a valid email!" }
+                  ]}
+                >
+                  <Input placeholder="Enter management email" />
+                </Form.Item>
 
-            <Form.Item
-              label="Management Username"
-              name="managementUserName"
-              rules={[
-                { required: true, message: "Please input management username!" }
-              ]}
-            >
-              <Input placeholder="Enter management username" />
-            </Form.Item>
+                <Form.Item
+                  label="Management Username"
+                  name="managementUserName"
+                  rules={[
+                    { required: true, message: "Please input management username!" }
+                  ]}
+                >
+                  <Input placeholder="Enter management username" />
+                </Form.Item>
 
-            <Form.Item
-              label="Management Phone Number"
-              name="managementPhoneNumber"
-              rules={[
-                { required: true, message: "Please input management phone number!" },
-                { 
-                  pattern: /^[0-9]{10}$/, 
-                  message: "Phone number must be exactly 10 digits!" 
-                }
-              ]}
-            >
-              <Input 
-                placeholder="Enter management phone number (10 digits)" 
-                maxLength={10}
-                onKeyPress={(e) => {
-                  if (!/[0-9]/.test(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
-              />
-            </Form.Item>
+                <Form.Item
+                  label="Management Phone Number"
+                  name="managementPhoneNumber"
+                  rules={[
+                    { required: true, message: "Please input management phone number!" },
+                    { 
+                      pattern: /^[0-9]{10}$/, 
+                      message: "Phone number must be exactly 10 digits!" 
+                    }
+                  ]}
+                >
+                  <Input 
+                    placeholder="Enter management phone number (10 digits)" 
+                    maxLength={10}
+                    onKeyPress={(e) => {
+                      if (!/[0-9]/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                  />
+                </Form.Item>
 
-            <Form.Item
-              label="Management Password"
-              name="managementPassword"
-              rules={[
-                { required: true, message: "Please input management password!" },
-                { min: 8, message: "Password must be at least 8 characters!" },
-                {
-                  validator: (_, value) => {
-                    if (!value) {
-                      return Promise.resolve();
+                <Form.Item
+                  label="Management Password"
+                  name="managementPassword"
+                  rules={[
+                    { required: true, message: "Please input management password!" },
+                    { min: 8, message: "Password must be at least 8 characters!" },
+                    {
+                      validator: (_, value) => {
+                        if (!value) {
+                          return Promise.resolve();
+                        }
+                        const hasUpperCase = /[A-Z]/.test(value);
+                        const hasLowerCase = /[a-z]/.test(value);
+                        const hasNumber = /[0-9]/.test(value);
+                        const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
+                        
+                        if (!hasUpperCase) {
+                          return Promise.reject(new Error("Password must contain at least 1 uppercase letter!"));
+                        }
+                        if (!hasLowerCase) {
+                          return Promise.reject(new Error("Password must contain at least 1 lowercase letter!"));
+                        }
+                        if (!hasNumber) {
+                          return Promise.reject(new Error("Password must contain at least 1 number!"));
+                        }
+                        if (!hasSpecialChar) {
+                          return Promise.reject(new Error("Password must contain at least 1 special character!"));
+                        }
+                        return Promise.resolve();
+                      }
                     }
-                    const hasUpperCase = /[A-Z]/.test(value);
-                    const hasLowerCase = /[a-z]/.test(value);
-                    const hasNumber = /[0-9]/.test(value);
-                    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
-                    
-                    if (!hasUpperCase) {
-                      return Promise.reject(new Error("Password must contain at least 1 uppercase letter!"));
-                    }
-                    if (!hasLowerCase) {
-                      return Promise.reject(new Error("Password must contain at least 1 lowercase letter!"));
-                    }
-                    if (!hasNumber) {
-                      return Promise.reject(new Error("Password must contain at least 1 number!"));
-                    }
-                    if (!hasSpecialChar) {
-                      return Promise.reject(new Error("Password must contain at least 1 special character!"));
-                    }
-                    return Promise.resolve();
-                  }
-                }
-              ]}
-            >
-              <Input.Password placeholder="Enter management password" />
-            </Form.Item>
-          </div>
+                  ]}
+                >
+                  <Input.Password placeholder="Enter management password" />
+                </Form.Item>
+              </div>
+            </>
+          )}
 
           <Title level={4}>Additional Images</Title>
           <div style={{ marginBottom: 24 }}>

@@ -1,5 +1,5 @@
 import axiosClient from "./axiosClient";
-import { getApartmentBuildingIdFromToken } from "../utils/token";
+import { getAppartmentBuildingId } from "../utils/token";
 import type { ApiResponse, FilterQuery, SortQuery } from "../types/apiResponse";
 import type { AnnouncementDto } from "../types/announcement";
 
@@ -12,6 +12,11 @@ interface GetAnnouncementsParams {
 
 export const announcementApi = {
   getAll: (params?: GetAnnouncementsParams): Promise<ApiResponse<AnnouncementDto[]>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+
     const queryParams = new URLSearchParams();
     if (params?.filters && params.filters.length > 0) {
       queryParams.append("filters", JSON.stringify(params.filters));
@@ -21,25 +26,49 @@ export const announcementApi = {
     }
     
     const headers: Record<string, string> = {};
-    headers.page = (params?.page ?? 1).toString();
-    headers.limit = (params?.limit ?? 20).toString();
+    if (params?.page) {
+      headers.page = params.page.toString();
+    }
+    if (params?.limit) {
+      headers.limit = params.limit.toString();
+    }
     
     const queryString = queryParams.toString();
-    const url = `/${getApartmentBuildingIdFromToken() || ""}/announcement${queryString ? `?${queryString}` : ""}`;
+    const url = `/${appartmentBuildingId}/announcement${queryString ? `?${queryString}` : ""}`;
     
     return axiosClient.get(url, { headers });
   },
 
-  getById: (id: string): Promise<ApiResponse<AnnouncementDto>> =>
-    axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/announcement/${id}`),
+  getById: (id: string): Promise<ApiResponse<AnnouncementDto>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.get(`/${appartmentBuildingId}/announcement/${id}`);
+  },
 
-  create: (data: AnnouncementDto): Promise<ApiResponse<void>> =>
-    axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/announcement`, data),
+  create: (data: AnnouncementDto): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.post(`/${appartmentBuildingId}/announcement`, data);
+  },
 
-  update: (data: AnnouncementDto): Promise<ApiResponse<void>> =>
-    axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/announcement`, data),
+  update: (data: AnnouncementDto): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.put(`/${appartmentBuildingId}/announcement`, data);
+  },
 
-  delete: (ids: string[]): Promise<ApiResponse<void>> =>
-    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/announcement`, { data: ids }),
+  delete: (ids: string[]): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.delete(`/${appartmentBuildingId}/announcement`, { data: ids });
+  },
 };
 

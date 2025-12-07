@@ -28,4 +28,9 @@ export function getApartmentBuildingIdFromToken(): string | null {
   );
 }
 
+// Helper function to get appartmentBuildingId (with 2 'p') for API endpoints
+export function getAppartmentBuildingId(): string | null {
+  return getApartmentBuildingIdFromToken();
+}
+
 

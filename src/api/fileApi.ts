@@ -1,14 +1,19 @@
 import axiosClient from "./axiosClient";
-import { getApartmentBuildingIdFromToken } from "../utils/token";
+import { getAppartmentBuildingId } from "../utils/token";
 import type { ApiResponse } from "../types/apiResponse";
 import type { ImageDto } from "../types/file";
 
 export const fileApi = {
   upload: (file: File): Promise<string> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     
-    return axiosClient.post<ApiResponse<ImageDto>>(`/${getApartmentBuildingIdFromToken() || ""}/file/upload`, formData, {
+    return axiosClient.post<ApiResponse<ImageDto>>(`/${appartmentBuildingId}/file/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

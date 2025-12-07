@@ -18,6 +18,7 @@ import Requests from "./pages/Request/Requests";
 import RequestForm from "./pages/Request/RequestForm";
 import RequestDetail from "./pages/Request/RequestDetail";
 import Roles from "./pages/Roles/Roles";
+import RoleForm from "./pages/Roles/RoleForm";
 import Forbidden403 from "./pages/Error/Forbidden403";
 import NotFound404 from "./pages/Error/NotFound404";
 import AuthGuard from "./components/AuthGuard";
@@ -195,6 +196,24 @@ export default function AppRoutes() {
           <ApartmentBuildingGuard>
             <PermissionGuard permission="Permissions.RolePermissions">
               <Roles />
+            </PermissionGuard>
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/roles/create" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <PermissionGuard permission="Permissions.RolePermissions">
+              <RoleForm />
+            </PermissionGuard>
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/roles/edit/:roleId" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <PermissionGuard permission="Permissions.RolePermissions">
+              <RoleForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>

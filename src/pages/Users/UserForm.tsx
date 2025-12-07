@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { Form, Input, Select, Button, Card, Typography, Spin, App } from "antd";
+import React, { useEffect, useState, useRef } from "react";
+import { Form, Input, Select, Button, Card, Typography, Spin, App, Space } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SaveOutlined, ReloadOutlined } from "@ant-design/icons";
 import { userApi } from "../../api/userApi";
+import { roleApi } from "../../api/roleApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { getErrorMessage } from "../../utils/errorHandler";
 import type { CreateOrUpdateUserRequestDto } from "../../types/user";
+import type { RoleDto } from "../../types/role";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -17,34 +19,86 @@ const UserForm: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const apartmentBuildingId = useApartmentBuildingId();
   const [loading, setLoading] = useState(false);
-  const roles: any[] = [];
+  const [fetchingRoles, setFetchingRoles] = useState(false);
+  const [roles, setRoles] = useState<RoleDto[]>([]);
+  const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  const [userRoleId, setUserRoleId] = useState<string>("");
+  const hasFetchedRolesRef = useRef(false);
+  const hasFetchedUserRef = useRef(false);
   
   const isEditMode = !!userId;
 
   useEffect(() => {
-    if (isEditMode) {
+    if (!hasFetchedRolesRef.current) {
+      hasFetchedRolesRef.current = true;
+      fetchRoles();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isEditMode && userId && !hasFetchedUserRef.current) {
+      hasFetchedUserRef.current = true;
       fetchUser();
     }
-  }, [userId]);
+  }, [isEditMode, userId]);
+
+  const fetchRoles = async () => {
+    try {
+      setFetchingRoles(true);
+      const response = await roleApi.getAll();
+      if (response.data) {
+        setRoles(response.data);
+      }
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch roles");
+      notification.error({ message: errorMessage });
+    } finally {
+      setFetchingRoles(false);
+    }
+  };
+
+  const generatePassword = () => {
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const numbers = "0123456789";
+    const special = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+    
+    const allChars = lowercase + uppercase + numbers + special;
+    let password = "";
+    
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += special[Math.floor(Math.random() * special.length)];
+    
+    const minLength = 12;
+    for (let i = password.length; i < minLength; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    password = password.split("").sort(() => Math.random() - 0.5).join("");
+    
+    setGeneratedPassword(password);
+    form.setFieldValue("password", password);
+    form.validateFields(["password"]);
+    notification.success({ message: "Password generated successfully!" });
+  };
 
   const fetchUser = async () => {
     if (!userId) return;
     
     try {
       setLoading(true);
-      const response = await userApi.getAll();
+      const response = await userApi.getById(userId);
       if (response.data) {
-        const userData = response.data.find(u => u.userId === userId);
-        if (userData) {
-          form.setFieldsValue({
-            displayName: userData.displayName,
-            email: userData.email,
-            userName: userData.userName,
-            roleId: userData.roleId,
-            phoneNumber: userData.phoneNumber,
-            appartmentBuildingId: userData.appartmentId,
-          });
-        }
+        setUserRoleId(response.data.roleId || "");
+        form.setFieldsValue({
+          displayName: response.data.displayName,
+          email: response.data.email,
+          userName: response.data.userName,
+          roleId: response.data.roleId || "",
+          phoneNumber: response.data.phoneNumber || "",
+        });
       }
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error, "Failed to fetch user data");
@@ -54,19 +108,29 @@ const UserForm: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (isEditMode && userRoleId && roles.length > 0) {
+      const roleExists = roles.some(role => role.roleId === userRoleId);
+      if (roleExists) {
+        form.setFieldValue("roleId", userRoleId);
+      }
+    }
+  }, [userRoleId, roles, isEditMode]);
+
   const handleSubmit = async (values: any) => {
     try {
       setLoading(true);
       
       const userData: CreateOrUpdateUserRequestDto = {
-        userId: isEditMode ? userId : null,
+        userId: isEditMode && userId ? userId : "",
         displayName: values.displayName,
         email: values.email,
         roleId: values.roleId,
-        possition: values.possition,
         userName: values.userName,
-        phoneNumber: values.phoneNumber,
-        appartmentBuildingId: values.appartmentBuildingId,
+        phoneNumber: values.phoneNumber || "",
+        appartmentBuildingId: apartmentBuildingId || "",
+        password: isEditMode ? "" : (values.password || generatedPassword || ""),
+        apartmentId: "",
       };
 
       if (isEditMode) {
@@ -171,7 +235,15 @@ const UserForm: React.FC = () => {
               name="roleId"
               rules={[{ required: true, message: "Please select a role!" }]}
             >
-              <Select placeholder="Select a role">
+              <Select 
+                placeholder="Select a role"
+                loading={fetchingRoles}
+                showSearch
+                filterOption={(input, option) => {
+                  const label = option?.label || option?.children;
+                  return String(label || "").toLowerCase().includes(input.toLowerCase());
+                }}
+              >
                 {roles.map((role) => (
                   <Option key={role.roleId} value={role.roleId}>
                     {role.roleName}
@@ -180,19 +252,47 @@ const UserForm: React.FC = () => {
               </Select>
             </Form.Item>
 
-            <Form.Item
-              label="Position"
-              name="possition"
-            >
-              <Input placeholder="Enter position" />
-            </Form.Item>
-
-            <Form.Item
-              label="Apartment Building ID"
-              name="appartmentBuildingId"
-            >
-              <Input placeholder="Enter apartment building ID" />
-            </Form.Item>
+            {!isEditMode && (
+              <Form.Item
+                label="Password"
+                name="password"
+                rules={[
+                  { required: true, message: "Please input password!" },
+                  { 
+                    min: 8, 
+                    message: "Password must be at least 8 characters!" 
+                  },
+                  {
+                    pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+                    message: "Password must contain uppercase, lowercase, number and special character!"
+                  }
+                ]}
+              >
+                <Space.Compact style={{ width: "100%" }}>
+                  <Input.Password 
+                    placeholder="Enter password"
+                    style={{ flex: 1 }}
+                    value={generatedPassword || form.getFieldValue("password")}
+                    onChange={(e) => {
+                      setGeneratedPassword(e.target.value);
+                      form.setFieldValue("password", e.target.value);
+                    }}
+                  />
+                  <Button 
+                    icon={<ReloadOutlined />}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      generatePassword();
+                    }}
+                    htmlType="button"
+                    type="default"
+                  >
+                    Auto Gen
+                  </Button>
+                </Space.Compact>
+              </Form.Item>
+            )}
           </div>
 
           <Form.Item style={{ marginTop: 24 }}>

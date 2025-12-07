@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, App, Breadcrumb, Input } from "antd";
-import { PlusOutlined, UserOutlined, EditOutlined, HomeOutlined, SearchOutlined } from "@ant-design/icons";
+import { Table, Typography, Button, App, Breadcrumb, Input, Modal, Space } from "antd";
+import { PlusOutlined, UserOutlined, EditOutlined, HomeOutlined, SearchOutlined, DeleteOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { userApi } from "../../api/userApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
@@ -20,6 +20,9 @@ const Users: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sorts, setSorts] = useState<SortQuery[]>([]);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserDto | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
   const hasFetchedUsersRef = useRef(false);
@@ -77,6 +80,48 @@ const Users: React.FC = () => {
     navigate(`/${apartmentBuildingId}/users/edit/${userId}`);
   };
 
+  const handleDelete = (user: UserDto) => {
+    setSelectedUser(user);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedUser || !selectedUser.userId) return;
+
+    try {
+      setDeleting(true);
+      const response = await userApi.delete([selectedUser.userId]);
+      
+      if (response.data) {
+        const { userIdsDeleteSuccess, userIdsDeleteError } = response.data;
+        
+        if (userIdsDeleteSuccess && userIdsDeleteSuccess.length > 0) {
+          notification.success({
+            message: "Success",
+            description: `User "${selectedUser.displayName}" has been deleted successfully.`,
+          });
+        }
+        
+        if (userIdsDeleteError && userIdsDeleteError.length > 0) {
+          notification.warning({
+            message: "Warning",
+            description: `Some users could not be deleted.`,
+          });
+        }
+        
+        setDeleteModalVisible(false);
+        setSelectedUser(null);
+        lastRequestKeyRef.current = "";
+        await fetchUsers();
+      }
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to delete user");
+      notification.error({ message: errorMessage });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleTableChange = (
     _pagination: any,
     _filters: any,
@@ -124,14 +169,6 @@ const Users: React.FC = () => {
       sortDirections: ["ascend", "descend"],
     },
     {
-      title: "Apartment Building Name",
-      dataIndex: "appartmentBuildingName",
-      key: "appartmentBuildingName",
-      sorter: true,
-      sortDirections: ["ascend", "descend"],
-      render: (text: string) => text || "N/A",
-    },
-    {
       title: "Phone",
       dataIndex: "phoneNumber",
       key: "phoneNumber",
@@ -142,15 +179,18 @@ const Users: React.FC = () => {
     {
       title: "Actions",
       key: "actions",
-      width: 100,
+      width: 120,
       render: (_: unknown, record: UserDto) => (
-        <Button 
-          type="text" 
-          size="small" 
-          icon={<EditOutlined style={{ color: "#000" }} />}
-          onClick={() => handleEdit(record.userId!)}
-          style={{ color: "#000" }}
-        />
+        <Space size="middle">
+          <EditOutlined
+            style={{ color: "#000", cursor: "pointer", fontSize: 16 }}
+            onClick={() => handleEdit(record.userId!)}
+          />
+          <DeleteOutlined
+            style={{ color: "#000", cursor: "pointer", fontSize: 16 }}
+            onClick={() => handleDelete(record)}
+          />
+        </Space>
       ),
     },
   ];
@@ -266,6 +306,49 @@ const Users: React.FC = () => {
         }}
         scroll={{ x: 800 }}
       />
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: "#ff4d4f", marginRight: 8 }} />
+            Delete User
+          </span>
+        }
+        open={deleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setSelectedUser(null);
+        }}
+        okText="Delete"
+        okType="danger"
+        cancelText="Cancel"
+        confirmLoading={deleting}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to delete <strong>{selectedUser?.displayName}</strong>?
+          </p>
+          <div style={{ 
+            background: '#fff7e6', 
+            border: '1px solid #ffd591', 
+            borderRadius: 4, 
+            padding: 12,
+            marginTop: 16 
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>This user will be permanently deleted</li>
+              <li>All data associated with this user will be lost</li>
+              <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

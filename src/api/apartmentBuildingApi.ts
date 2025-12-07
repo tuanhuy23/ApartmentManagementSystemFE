@@ -24,8 +24,12 @@ export const apartmentBuildingApi = {
     }
     
     const headers: Record<string, string> = {};
-    headers.page = (params?.page ?? 1).toString();
-    headers.limit = (params?.limit ?? 20).toString();
+    if (params?.page) {
+      headers.page = params.page.toString();
+    }
+    if (params?.limit) {
+      headers.limit = params.limit.toString();
+    }
     
     const queryString = queryParams.toString();
     const url = `/apartment-building${queryString ? `?${queryString}` : ""}`;

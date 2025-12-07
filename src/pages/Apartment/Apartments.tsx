@@ -23,8 +23,17 @@ const Apartments: React.FC = () => {
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
   const hasFetchedApartmentsRef = useRef(false);
+  const lastRequestKeyRef = useRef<string>("");
 
   const fetchApartments = async () => {
+    const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
+    
+    if (lastRequestKeyRef.current === requestKey) {
+      return;
+    }
+    
+    lastRequestKeyRef.current = requestKey;
+
     try {
       setLoading(true);
       const filters: FilterQuery[] = [];

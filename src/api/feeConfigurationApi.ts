@@ -1,5 +1,5 @@
 import axiosClient from "./axiosClient";
-import { getApartmentBuildingIdFromToken } from "../utils/token";
+import { getAppartmentBuildingId } from "../utils/token";
 import type { ApiResponse, FilterQuery, SortQuery } from "../types/apiResponse";
 import type {
   FeeTypeDto,
@@ -15,6 +15,11 @@ interface GetFeeConfigurationsParams {
 
 export const feeConfigurationApi = {
   getAll: (params?: GetFeeConfigurationsParams): Promise<ApiResponse<FeeTypeDto[]>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+
     const queryParams = new URLSearchParams();
     if (params?.filters && params.filters.length > 0) {
       queryParams.append("filters", JSON.stringify(params.filters));
@@ -24,25 +29,49 @@ export const feeConfigurationApi = {
     }
     
     const headers: Record<string, string> = {};
-    headers.page = (params?.page ?? 1).toString();
-    headers.limit = (params?.limit ?? 20).toString();
+    if (params?.page) {
+      headers.page = params.page.toString();
+    }
+    if (params?.limit) {
+      headers.limit = params.limit.toString();
+    }
     
     const queryString = queryParams.toString();
-    const url = `/${getApartmentBuildingIdFromToken() || ""}/fee-configuration${queryString ? `?${queryString}` : ""}`;
+    const url = `/${appartmentBuildingId}/fee-configuration${queryString ? `?${queryString}` : ""}`;
     
     return axiosClient.get(url, { headers });
   },
 
-  getById: (id: string): Promise<ApiResponse<FeeTypeDto>> =>
-    axiosClient.get(`/${getApartmentBuildingIdFromToken() || ""}/fee-configuration/${id}`),
+  getById: (id: string): Promise<ApiResponse<FeeTypeDto>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.get(`/${appartmentBuildingId}/fee-configuration/${id}`);
+  },
 
-  create: (data: CreateOrUpdateFeeTypeDto): Promise<ApiResponse<void>> =>
-    axiosClient.post(`/${getApartmentBuildingIdFromToken() || ""}/fee-configuration`, data),
+  create: (data: CreateOrUpdateFeeTypeDto): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.post(`/${appartmentBuildingId}/fee-configuration`, data);
+  },
 
-  update: (data: CreateOrUpdateFeeTypeDto): Promise<ApiResponse<void>> =>
-    axiosClient.put(`/${getApartmentBuildingIdFromToken() || ""}/fee-configuration`, data),
+  update: (data: CreateOrUpdateFeeTypeDto): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.put(`/${appartmentBuildingId}/fee-configuration`, data);
+  },
 
-  delete: (ids: string[]): Promise<ApiResponse<void>> =>
-    axiosClient.delete(`/${getApartmentBuildingIdFromToken() || ""}/fee-configuration`, { data: ids }),
+  delete: (ids: string[]): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.delete(`/${appartmentBuildingId}/fee-configuration`, { data: ids });
+  },
 };
 

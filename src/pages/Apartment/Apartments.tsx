@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, Space, App, Breadcrumb, Input } from "antd";
-import { PlusOutlined, HomeOutlined, EyeOutlined, DeleteOutlined, SearchOutlined } from "@ant-design/icons";
+import { Table, Typography, Button, Space, App, Breadcrumb, Input, Modal } from "antd";
+import { PlusOutlined, HomeOutlined, EyeOutlined, DeleteOutlined, SearchOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { apartmentApi } from "../../api/apartmentApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
@@ -13,13 +13,16 @@ import type { ColumnType } from "antd/es/table";
 const { Title } = Typography;
 
 const Apartments: React.FC = () => {
-  const { modal, notification } = App.useApp();
+  const { notification } = App.useApp();
   const [apartments, setApartments] = useState<ApartmentDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sorts, setSorts] = useState<SortQuery[]>([]);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedApartment, setSelectedApartment] = useState<ApartmentDto | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
   const hasFetchedApartmentsRef = useRef(false);
@@ -77,22 +80,28 @@ const Apartments: React.FC = () => {
     navigate(`/${apartmentBuildingId}/apartments/${apartmentId}`);
   };
 
-  const handleDelete = (apartmentId: string) => {
-    modal.confirm({
-      title: "Delete Apartment",
-      content: "Are you sure you want to delete this apartment? This action cannot be undone.",
-      okText: "Delete",
-      okType: "danger",
-      cancelText: "Cancel",
-      onOk: async () => {
-        try {
-          notification.error({ message: "Delete functionality not available in API" });
-        } catch (error: unknown) {
-          const errorMessage = getErrorMessage(error, "Failed to delete apartment");
-          notification.error({ message: errorMessage });
-        }
-      },
-    });
+  const handleDeleteClick = (record: ApartmentDto) => {
+    setSelectedApartment(record);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedApartment?.id) return;
+
+    try {
+      setDeleting(true);
+      await apartmentApi.delete(selectedApartment.id);
+      notification.success({ message: "Apartment deleted successfully!" });
+      setDeleteModalVisible(false);
+      setSelectedApartment(null);
+      lastRequestKeyRef.current = "";
+      await fetchApartments();
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to delete apartment");
+      notification.error({ message: errorMessage });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleTableChange = (
@@ -160,7 +169,7 @@ const Apartments: React.FC = () => {
             type="link"
             size="small"
             icon={<DeleteOutlined style={{ color: "#000" }} />}
-            onClick={() => handleDelete(record.id)}
+            onClick={() => handleDeleteClick(record)}
             style={{ color: "#000" }}
           >
           </Button>
@@ -282,6 +291,48 @@ const Apartments: React.FC = () => {
         }}
         scroll={{ x: 800 }}
       />
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
+            Warning: Delete Apartment
+          </span>
+        }
+        open={deleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setSelectedApartment(null);
+        }}
+        okText="Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true, loading: deleting }}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to delete <strong>{selectedApartment?.name}</strong>?
+          </p>
+          <div style={{ 
+            background: '#fff7e6', 
+            border: '1px solid #ffd591', 
+            borderRadius: 4, 
+            padding: 12,
+            marginTop: 16 
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>All information related to this apartment will be permanently deleted</li>
+              <li>Residents belonging to this apartment will lose access</li>
+              <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

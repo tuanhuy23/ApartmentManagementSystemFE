@@ -9,6 +9,7 @@ export interface FeeTypeDto {
   isActive: boolean;
   defaultRate: number;
   defaultVATRate: number;
+  applyDate: string | null;
   feeRateConfigs: FeeRateConfigDto[];
   quantityRateConfigs: QuantityRateConfigDto[];
 }
@@ -19,8 +20,10 @@ export interface FeeRateConfigDto {
   feeTypeId: string;
   vatRate: number;
   isActive: boolean;
+  applyDate: string;
   name: string;
   unitName: string;
+  otherRate: number | null;
   feeTiers: FeeTierDto[];
 }
 
@@ -43,6 +46,7 @@ export interface CreateOrUpdateFeeTypeDto {
   defaultRate: number;
   defaultVATRate: number;
   isActive: boolean;
+  applyDate: string | null;
   feeRateConfigs: CreateOrUpdateFeeRateConfigDto[];
   quantityRateConfigs: CreateOrUpdateQuantityRateConfigDto[];
 }
@@ -52,6 +56,9 @@ export interface CreateOrUpdateFeeRateConfigDto {
   name: string;
   vatRate: number;
   isActive: boolean;
+  applyDate: string;
+  unitName: string;
+  otherRate: number | null;
   feeTiers: CreateOrUpdateFeeRateTierDto[];
 }
 
@@ -61,7 +68,6 @@ export interface CreateOrUpdateFeeRateTierDto {
   consumptionStart: number;
   consumptionEnd: number;
   unitRate: number;
-  unitName: string;
 }
 
 export interface QuantityRateConfigDto {
@@ -90,6 +96,7 @@ export interface FeeType {
   isVATApplicable?: boolean;
   defaultRate?: number;
   vatRate?: number;
+  applyDate?: string | null;
   quantityRates?: QuantityRate[];
   rateConfigs?: FeeRateConfig[];
 }
@@ -107,6 +114,7 @@ export interface FeeRateConfig {
   vatRate: number;
   bvmtFee: number;
   unitName?: string;
+  applyDate?: string;
   status: "ACTIVE" | "INACTIVE";
   tiers?: FeeTier[];
 }

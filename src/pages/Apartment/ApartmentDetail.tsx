@@ -35,6 +35,8 @@ import { apartmentApi } from "../../api/apartmentApi";
 import { feeApi } from "../../api/feeApi";
 import { feeConfigurationApi } from "../../api/feeConfigurationApi";
 import { getErrorMessage } from "../../utils/errorHandler";
+import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import type { UpdateApartmentDto } from "../../types/apartment";
 import type {
   FeeNotice,
   UtilityReading,
@@ -52,6 +54,7 @@ const { Option } = Select;
 const ApartmentDetail: React.FC = () => {
   const { apartmentId } = useParams<{ apartmentId: string }>();
   const { notification } = App.useApp();
+  const apartmentBuildingId = useApartmentBuildingId();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isConfirmDrawerVisible, setIsConfirmDrawerVisible] = useState(false);
@@ -64,6 +67,7 @@ const ApartmentDetail: React.FC = () => {
   const [currentPaymentStatus] = useState<"N/A" | "UNPAID" | "PAID">("N/A");
   const [selectedFees, setSelectedFees] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [apartmentData, setApartmentData] = useState<ApartmentDto | null>(null);
   const [feeNotices, setFeeNotices] = useState<FeeNotice[]>([]);
   const [utilityReadings, setUtilityReadings] = useState<UtilityReading[]>([]);
@@ -520,6 +524,39 @@ const ApartmentDetail: React.FC = () => {
     setIsConfirmDrawerVisible(false);
   };
 
+  const handleUpdateApartment = async () => {
+    try {
+      await apartmentForm.validateFields();
+      const values = apartmentForm.getFieldsValue();
+      
+      if (!apartmentId || !apartmentBuildingId) {
+        notification.error({ message: "Missing required information" });
+        return;
+      }
+
+      setUpdating(true);
+      const updateData: UpdateApartmentDto = {
+        id: apartmentId,
+        name: values.name,
+        area: values.area,
+        floor: values.floor,
+      };
+
+      await apartmentApi.update(updateData);
+      notification.success({ message: "Apartment updated successfully!" });
+      
+      await fetchApartmentDetail();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        return;
+      }
+      const errorMessage = getErrorMessage(error, "Failed to update apartment");
+      notification.error({ message: errorMessage });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
 
   return (
     <div style={{ padding: 24 }}>
@@ -535,41 +572,74 @@ const ApartmentDetail: React.FC = () => {
           This area displays foundational data used for AREA and QUANTITY calculations, and determines the building that applies the price configuration.
         </Text>
 
-        <Form form={apartmentForm} layout="vertical">
+        <Form form={apartmentForm} layout="vertical" onFinish={handleUpdateApartment}>
           <Row gutter={[24, 16]}>
             <Col xs={24} sm={12}>
-              <Form.Item label="Apartment Code">
-                <Input value={apartmentData?.name || ""} readOnly />
+              <Form.Item
+                label="Apartment Name"
+                name="name"
+                rules={[
+                  { required: true, message: "Please enter apartment name" },
+                  { max: 16, message: "Apartment name must not exceed 16 characters" },
+                ]}
+              >
+                <Input placeholder="Enter apartment name" maxLength={16} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
               <Form.Item
                 label="Area (m²)"
                 name="area"
-                rules={[{ required: true, message: "Please enter area" }]}
+                rules={[
+                  { required: true, message: "Please enter area" },
+                  { type: "number", message: "Area must be a number" },
+                  { type: "number", min: 0, message: "Area must be greater than 0" },
+                ]}
               >
-                <InputNumber style={{ width: "100%" }} min={0} step={0.01} />
+                <InputNumber
+                  style={{ width: "100%" }}
+                  placeholder="Enter area in square meters"
+                  min={0}
+                  step={0.01}
+                  precision={2}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
               <Form.Item
                 label="Floor"
                 name="floor"
-                rules={[{ required: true, message: "Please enter floor" }]}
+                rules={[
+                  { required: true, message: "Please enter floor number" },
+                  { type: "number", message: "Floor must be a number" },
+                  { type: "number", min: 0, message: "Floor must be 0 or greater" },
+                  {
+                    validator: (_, value) => {
+                      if (value === null || value === undefined) {
+                        return Promise.resolve();
+                      }
+                      if (Number.isInteger(value)) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error("Floor must be an integer"));
+                    },
+                  },
+                ]}
               >
-                <InputNumber style={{ width: "100%" }} min={0} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Name"
-                name="name"
-                rules={[{ required: true, message: "Please enter name" }]}
-              >
-                <Input />
+                <InputNumber
+                  style={{ width: "100%" }}
+                  placeholder="Enter floor number"
+                  min={0}
+                  precision={0}
+                />
               </Form.Item>
             </Col>
           </Row>
+          <Form.Item style={{ marginTop: 16 }}>
+            <Button type="primary" htmlType="submit" loading={updating}>
+              Update
+            </Button>
+          </Form.Item>
         </Form>
       </Card>
 

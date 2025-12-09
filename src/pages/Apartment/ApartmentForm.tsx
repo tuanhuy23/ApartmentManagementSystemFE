@@ -96,9 +96,12 @@ const ApartmentForm: React.FC = () => {
         <Form.Item
           name="name"
           label="Apartment Name"
-          rules={[{ required: true, message: "Please enter apartment name" }]}
+          rules={[
+            { required: true, message: "Please enter apartment name" },
+            { max: 16, message: "Apartment name must not exceed 16 characters" },
+          ]}
         >
-          <Input placeholder="Enter apartment name" />
+          <Input placeholder="Enter apartment name" maxLength={16} />
         </Form.Item>
 
         <Form.Item
@@ -106,6 +109,7 @@ const ApartmentForm: React.FC = () => {
           label="Area (m²)"
           rules={[
             { required: true, message: "Please enter area" },
+            { type: "number", message: "Area must be a number" },
             { type: "number", min: 0, message: "Area must be greater than 0" },
           ]}
         >
@@ -114,6 +118,7 @@ const ApartmentForm: React.FC = () => {
             placeholder="Enter area in square meters"
             min={0}
             step={0.01}
+            precision={2}
           />
         </Form.Item>
 
@@ -122,13 +127,26 @@ const ApartmentForm: React.FC = () => {
           label="Floor"
           rules={[
             { required: true, message: "Please enter floor number" },
+            { type: "number", message: "Floor must be a number" },
             { type: "number", min: 0, message: "Floor must be 0 or greater" },
+            {
+              validator: (_, value) => {
+                if (value === null || value === undefined) {
+                  return Promise.resolve();
+                }
+                if (Number.isInteger(value)) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error("Floor must be an integer"));
+              },
+            },
           ]}
         >
           <InputNumber
             style={{ width: "100%" }}
             placeholder="Enter floor number"
             min={0}
+            precision={0}
           />
         </Form.Item>
 

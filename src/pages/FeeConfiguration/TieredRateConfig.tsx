@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Drawer, Table, Button, Space, Input, InputNumber, Form, App, Popconfirm, Switch } from "antd";
-import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, CloseOutlined } from "@ant-design/icons";
+import { Drawer, Table, Button, Space, Input, InputNumber, Form, App, Popconfirm, Switch, DatePicker } from "antd";
+import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, CloseOutlined, EditOutlined, DeleteOutlined, SettingOutlined } from "@ant-design/icons";
+import dayjs, { Dayjs } from "dayjs";
 import type { FeeType, FeeRateConfig } from "../../types/fee";
 import TierDetails from "./TierDetails";
 
@@ -24,9 +25,12 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
     feeType.rateConfigs || []
   );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTierDetailsOpen, setIsTierDetailsOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<FeeRateConfig | null>(null);
+  const [editingConfigForEdit, setEditingConfigForEdit] = useState<FeeRateConfig | null>(null);
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
 
   useEffect(() => {
     if (open) {
@@ -47,6 +51,9 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
         vatRate: values.vatRate,
         bvmtFee: values.bvmtFee || 0,
         unitName: values.unitName || "",
+        applyDate: values.applyDate && dayjs.isDayjs(values.applyDate) 
+          ? values.applyDate.format("YYYY-MM-DDTHH:mm:ss") 
+          : new Date().toISOString(),
         status: "INACTIVE",
         tiers: [],
       };
@@ -55,6 +62,44 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
       form.resetFields();
       setEditingConfig(newConfig);
       setIsTierDetailsOpen(true);
+    });
+  };
+
+  const handleEditConfig = (config: FeeRateConfig) => {
+    setEditingConfigForEdit(config);
+    editForm.setFieldsValue({
+      configName: config.configName,
+      vatRate: config.vatRate,
+      unitName: config.unitName || "",
+      applyDate: config.applyDate ? dayjs(config.applyDate) : null,
+      bvmtFee: config.bvmtFee || 0,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateConfig = () => {
+    editForm.validateFields().then((values) => {
+      if (editingConfigForEdit) {
+        const updatedConfig: FeeRateConfig = {
+          ...editingConfigForEdit,
+          configName: values.configName,
+          vatRate: values.vatRate,
+          bvmtFee: values.bvmtFee || 0,
+          unitName: values.unitName || "",
+          applyDate: values.applyDate && dayjs.isDayjs(values.applyDate) 
+            ? values.applyDate.format("YYYY-MM-DDTHH:mm:ss") 
+            : editingConfigForEdit.applyDate || new Date().toISOString(),
+        };
+        setRateConfigs(
+          rateConfigs.map((config) =>
+            config.id === editingConfigForEdit.id ? updatedConfig : config
+          )
+        );
+        setIsEditModalOpen(false);
+        setEditingConfigForEdit(null);
+        editForm.resetFields();
+        notification.success({ message: "Config updated successfully" });
+      }
     });
   };
 
@@ -140,11 +185,19 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
           <Button
             type="text"
             size="small"
+            icon={<SettingOutlined style={{ color: "#000" }} />}
+            onClick={() => handleEditConfig(record)}
+            style={{ color: "#000" }}
+            title="Edit Config"
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined style={{ color: "#000" }} />}
             onClick={() => handleEditTiers(record)}
             style={{ color: "#000" }}
-          >
-            Edit
-          </Button>
+            title="Edit Tiers"
+          />
           <Popconfirm
             title="Delete config"
             description="Are you sure you want to delete this config?"
@@ -155,10 +208,9 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
             <Button
               type="text"
               size="small"
+              icon={<DeleteOutlined style={{ color: "#000" }} />}
               style={{ color: "#000" }}
-            >
-              Delete
-            </Button>
+            />
           </Popconfirm>
         </Space>
       ),
@@ -292,6 +344,18 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
           </Form.Item>
 
           <Form.Item
+            name="applyDate"
+            label="Apply Date"
+            rules={[{ required: true, message: "Please select apply date" }]}
+          >
+            <DatePicker
+              style={{ width: "100%" }}
+              format="DD/MM/YYYY"
+              placeholder="Select apply date"
+            />
+          </Form.Item>
+
+          <Form.Item
             name="bvmtFee"
             label="Other Fee"
             initialValue={0}
@@ -323,6 +387,126 @@ const TieredRateConfig: React.FC<TieredRateConfigProps> = ({
               </Button>
               <Button type="primary" onClick={handleCreateConfig}>
                 Create & Edit Tiers
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Drawer>
+
+      <Drawer
+        title={
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Edit Rate Config</span>
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              onClick={() => {
+                setIsEditModalOpen(false);
+                setEditingConfigForEdit(null);
+                editForm.resetFields();
+              }}
+            />
+          </div>
+        }
+        placement="right"
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingConfigForEdit(null);
+          editForm.resetFields();
+        }}
+        open={isEditModalOpen}
+        width={600}
+        closable={false}
+        maskClosable={false}
+        zIndex={1000}
+        styles={{ 
+          body: { transition: "transform 0.3s cubic-bezier(0.23, 1, 0.32, 1)" },
+          mask: { zIndex: 999, transition: "opacity 0.3s ease-in-out" },
+          wrapper: { transform: "translateX(0) !important" as any }
+        }}
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item
+            name="configName"
+            label="Config Name"
+            rules={[{ required: true, message: "Please enter config name" }]}
+          >
+            <Input placeholder="Enter config name" />
+          </Form.Item>
+
+          <Form.Item
+            name="vatRate"
+            label="VAT Rate"
+            rules={[{ required: true, message: "Please enter VAT rate" }]}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              placeholder="Enter VAT rate (e.g., 0.08 for 8%)"
+              min={0}
+              max={1}
+              step={0.01}
+              formatter={(value) => `${(value! * 100).toFixed(0)}%`}
+              parser={((value: string | undefined) => {
+                if (!value) return 0;
+                const num = parseFloat(value.replace("%", "")) / 100;
+                return isNaN(num) ? 0 : num;
+              }) as any}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="unitName"
+            label="Unit Name"
+            rules={[{ required: true, message: "Please enter unit name" }]}
+          >
+            <Input placeholder="Enter unit name" />
+          </Form.Item>
+
+          <Form.Item
+            name="applyDate"
+            label="Apply Date"
+            rules={[{ required: true, message: "Please select apply date" }]}
+          >
+            <DatePicker
+              style={{ width: "100%" }}
+              format="DD/MM/YYYY"
+              placeholder="Select apply date"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="bvmtFee"
+            label="Other Fee"
+            initialValue={0}
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              placeholder="Enter other fee (e.g., 0.00 for 0%)"
+              min={0}
+              max={1}
+              step={0.01}
+              formatter={(value) => `${(value! * 100).toFixed(0)}%`}
+              parser={((value: string | undefined) => {
+                if (!value) return 0;
+                const num = parseFloat(value.replace("%", "")) / 100;
+                return isNaN(num) ? 0 : num;
+              }) as any}
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginTop: 24, marginBottom: 0 }}>
+            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+              <Button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingConfigForEdit(null);
+                  editForm.resetFields();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="primary" onClick={handleUpdateConfig}>
+                Update Config
               </Button>
             </Space>
           </Form.Item>

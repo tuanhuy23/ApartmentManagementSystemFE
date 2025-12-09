@@ -111,7 +111,7 @@ const TierDetails: React.FC<TierDetailsProps> = ({
       ),
     },
     {
-      title: "Rate (VND/kWh)",
+      title: `Rate (${rateConfig.unitName || "unit"})`,
       key: "rate",
       render: (_: unknown, record: TierWithTempId) => (
         <InputNumber

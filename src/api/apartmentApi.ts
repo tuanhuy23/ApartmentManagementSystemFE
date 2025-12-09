@@ -1,7 +1,7 @@
 import axiosClient from "./axiosClient";
 import { getAppartmentBuildingId } from "../utils/token";
 import type { ApiResponse, FilterQuery, SortQuery } from "../types/apiResponse";
-import type { ApartmentDto, CreateOrUpdateApartmentDto } from "../types/apartment";
+import type { ApartmentDto, CreateOrUpdateApartmentDto, UpdateApartmentDto } from "../types/apartment";
 import type { ResidentDto } from "../types/resident";
 
 interface GetApartmentsParams {
@@ -107,7 +107,7 @@ export const apartmentApi = {
     return axiosClient.get(`/${appartmentBuildingId}/apartment/${apartmentId}/residents/detail/${id}`);
   },
 
-  update: (data: CreateOrUpdateApartmentDto): Promise<ApiResponse<void>> => {
+  update: (data: UpdateApartmentDto): Promise<ApiResponse<void>> => {
     const appartmentBuildingId = getAppartmentBuildingId();
     if (!appartmentBuildingId) {
       return Promise.reject(new Error("AppartmentBuildingId is required"));

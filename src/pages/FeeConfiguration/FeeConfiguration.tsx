@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Table, Typography, Button, Space, Tag, App, Breadcrumb } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { Table, Typography, Button, Space, Tag, App, Breadcrumb, Modal } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, HomeOutlined, CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { feeConfigurationApi } from "../../api/feeConfigurationApi";
 import { getErrorMessage } from "../../utils/errorHandler";
@@ -15,6 +15,9 @@ const FeeConfiguration: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFeeType, setEditingFeeType] = useState<FeeType | null>(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedFeeTypeForDelete, setSelectedFeeTypeForDelete] = useState<FeeType | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const hasFetchedFeeTypesRef = useRef(false);
   const apartmentBuildingId = useApartmentBuildingId();
 
@@ -53,11 +56,14 @@ const FeeConfiguration: React.FC = () => {
       isVATApplicable: dto.isVATApplicable,
       defaultRate: dto.defaultRate,
       vatRate: activeConfig?.vatRate || 0,
+      applyDate: dto.applyDate,
       rateConfigs: dto.feeRateConfigs?.map((rc) => ({
         id: rc.id,
         configName: rc.name,
         vatRate: rc.vatRate,
         bvmtFee: 0,
+        unitName: rc.unitName,
+        applyDate: rc.applyDate,
         status: rc.isActive ? "ACTIVE" : "INACTIVE",
         tiers: rc.feeTiers?.map((t) => ({
           id: t.id,
@@ -98,8 +104,28 @@ const FeeConfiguration: React.FC = () => {
     }
   };
 
-  const handleDelete = () => {
-    notification.error({ message: "Delete functionality not available in API" });
+  const handleDelete = (feeType: FeeType) => {
+    setSelectedFeeTypeForDelete(feeType);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedFeeTypeForDelete) return;
+
+    try {
+      setDeleting(true);
+      await feeConfigurationApi.delete([selectedFeeTypeForDelete.id]);
+      notification.success({ message: "Fee type deleted successfully!" });
+      setDeleteModalVisible(false);
+      setSelectedFeeTypeForDelete(null);
+      hasFetchedFeeTypesRef.current = false;
+      fetchFeeTypes();
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to delete fee type");
+      notification.error({ message: errorMessage });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleSave = async (feeType: FeeType) => {
@@ -128,6 +154,7 @@ const FeeConfiguration: React.FC = () => {
   };
 
   const convertFeeTypeToDto = (feeType: FeeType) => {
+    const now = new Date().toISOString();
     return {
       id: feeType.id && feeType.id.trim() !== "" ? feeType.id : null,
       name: feeType.feeName,
@@ -137,18 +164,21 @@ const FeeConfiguration: React.FC = () => {
       defaultRate: feeType.defaultRate || 0,
       defaultVATRate: feeType.vatRate || 0,
       isActive: feeType.isActive ?? true,
+      applyDate: feeType.applyDate ?? null,
       feeRateConfigs: feeType.rateConfigs?.map((rc) => ({
         id: rc.id && rc.id.trim() !== "" ? rc.id : null,
         name: rc.configName,
         vatRate: rc.vatRate,
         isActive: rc.status === "ACTIVE",
+        applyDate: rc.applyDate || now,
+        unitName: rc.unitName || "unit",
+        otherRate: null,
         feeTiers: rc.tiers?.map((t) => ({
           id: t.id && t.id.trim() !== "" ? t.id : null,
           tierOrder: t.tier,
           consumptionStart: t.from,
           consumptionEnd: t.to,
           unitRate: t.rate,
-          unitName: "unit",
         })) || [],
       })) || [],
       quantityRateConfigs: feeType.quantityRates?.map((qr) => ({
@@ -204,7 +234,7 @@ const FeeConfiguration: React.FC = () => {
             type="text"
             size="small"
             icon={<DeleteOutlined style={{ color: "#000" }} />}
-            onClick={handleDelete}
+            onClick={() => handleDelete(record)}
             style={{ color: "#000" }}
           />
         </Space>
@@ -271,6 +301,47 @@ const FeeConfiguration: React.FC = () => {
         feeType={editingFeeType}
         buildingName=""
       />
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
+            Warning: Delete Fee Type
+          </span>
+        }
+        open={deleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setSelectedFeeTypeForDelete(null);
+        }}
+        okText="Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true, loading: deleting }}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to delete <strong>{selectedFeeTypeForDelete?.feeName}</strong>?
+          </p>
+          <div style={{ 
+            background: '#fff7e6', 
+            border: '1px solid #ffd591', 
+            borderRadius: 4, 
+            padding: 12,
+            marginTop: 16 
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>All fee configuration data will be permanently deleted</li>
+              <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

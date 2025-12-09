@@ -16,7 +16,12 @@ export interface CreateOrUpdateApartmentDto {
   floor: number;
 }
 
-export interface CreateOrUpdateApartmentDto extends Omit<ApartmentDto, "id"> {}
+export interface UpdateApartmentDto {
+  id: string;
+  area: number;
+  name: string;
+  floor: number;
+}
 
 export interface FeeNoticeDto {
   id: string;

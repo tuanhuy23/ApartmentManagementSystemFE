@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Drawer, Form, Input, Select, InputNumber, Button, Space, App, Switch } from "antd";
+import { Drawer, Form, Input, Select, InputNumber, Button, Space, App, Switch, DatePicker } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 import type { FeeType, CalculationType } from "../../types/fee";
 import QuantityRateConfig from "./QuantityRateConfig";
 import TieredRateConfig from "./TieredRateConfig";
+import dayjs from "dayjs";
 
 interface FeeTypeFormProps {
   open: boolean;
@@ -35,7 +36,8 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
         feeName: feeType.feeName,
         calculationType: feeType.calculationType,
         defaultRate: feeType.defaultRate,
-        vatRate: feeType.vatRate,
+        vatRate: feeType.vatRate ?? 0,
+        applyDate: feeType.applyDate ? dayjs(feeType.applyDate) : null,
       });
       setCalculationType(feeType.calculationType);
       setTempFeeType(feeType);
@@ -45,6 +47,7 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
       form.resetFields();
       form.setFieldsValue({
         calculationType: "AREA",
+        vatRate: 0,
       });
       setCalculationType("AREA");
       setTempFeeType(null);
@@ -73,7 +76,10 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
       buildingId: tempFeeType?.buildingId || "",
       buildingName: buildingName,
       defaultRate: formValues.defaultRate,
-      vatRate: formValues.vatRate,
+      vatRate: formValues.vatRate ?? 0,
+      applyDate: formValues.applyDate && dayjs.isDayjs(formValues.applyDate) 
+        ? formValues.applyDate.toISOString() 
+        : null,
       quantityRates: tempFeeType?.quantityRates || [],
       rateConfigs: tempFeeType?.rateConfigs || [],
     };
@@ -88,7 +94,10 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
         buildingId: feeType?.buildingId || tempFeeType?.buildingId || "",
         buildingName: buildingName,
         defaultRate: values.defaultRate,
-        vatRate: values.vatRate,
+        vatRate: values.vatRate ?? 0,
+        applyDate: values.applyDate && dayjs.isDayjs(values.applyDate) 
+          ? values.applyDate.toISOString() 
+          : null,
         isActive: feeType ? isActive : true,
         isVATApplicable: isVATApplicable,
         quantityRates: feeType?.quantityRates || tempFeeType?.quantityRates || [],
@@ -182,7 +191,7 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
                 <Form.Item
                   name="vatRate"
                   label="VAT Rate"
-                  rules={[{ required: isVATApplicable, message: "Please enter VAT rate" }]}
+                  initialValue={0}
                 >
                   <InputNumber
                     style={{ width: "100%" }}
@@ -220,12 +229,26 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
               <InputNumber
                 style={{ width: "100%" }}
                 placeholder="Enter default rate"
-                formatter={(value) => `${value} VND/m²`}
+                min={0}
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                 parser={((value: string | undefined) => {
                   if (!value) return 0;
-                  return parseFloat(value.replace(" VND/m²", "")) || 0;
+                  return parseFloat(value.replace(/,/g, "")) || 0;
                 }) as any}
-                min={0}
+              />
+            </Form.Item>
+          )}
+
+          {(calculationType === "AREA" || calculationType === "QUANTITY") && (
+            <Form.Item
+              name="applyDate"
+              label="Apply Date"
+              rules={[{ required: true, message: "Please select apply date" }]}
+            >
+              <DatePicker
+                style={{ width: "100%" }}
+                format="DD/MM/YYYY"
+                placeholder="Select apply date"
               />
             </Form.Item>
           )}

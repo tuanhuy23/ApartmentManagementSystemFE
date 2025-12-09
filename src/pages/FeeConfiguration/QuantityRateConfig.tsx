@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Drawer, Table, Button, InputNumber, Input, Space } from "antd";
+import { Drawer, Table, Button, InputNumber, Input, Space, Select } from "antd";
 import { PlusOutlined, DeleteOutlined, CloseOutlined } from "@ant-design/icons";
 import type { FeeType, QuantityRate } from "../../types/fee";
+
+const { Option } = Select;
+
+const ITEM_TYPE_OPTIONS = [
+  "Electric Motorbike",
+  "Motorbike",
+  "Electric Car",
+  "Car",
+  "Bicycle",
+  "Other",
+];
 
 interface QuantityRateConfigProps {
   open: boolean;
@@ -66,13 +77,41 @@ const QuantityRateConfig: React.FC<QuantityRateConfigProps> = ({
     {
       title: "Item Type",
       key: "itemType",
-      render: (_: unknown, record: QuantityRateWithTempId) => (
-        <Input
-          value={record.itemType}
-          onChange={(e) => handleFieldChange(record.tempId!, "itemType", e.target.value)}
-          placeholder="Enter item type"
-        />
-      ),
+      render: (_: unknown, record: QuantityRateWithTempId) => {
+        const isOther = !ITEM_TYPE_OPTIONS.slice(0, -1).includes(record.itemType);
+        const selectedValue = isOther ? "Other" : record.itemType;
+        
+        return (
+          <Space.Compact style={{ width: "100%" }}>
+            <Select
+              value={selectedValue}
+              onChange={(value) => {
+                if (value === "Other") {
+                  handleFieldChange(record.tempId!, "itemType", "");
+                } else {
+                  handleFieldChange(record.tempId!, "itemType", value);
+                }
+              }}
+              style={{ width: isOther ? "40%" : "100%" }}
+              placeholder="Select item type"
+            >
+              {ITEM_TYPE_OPTIONS.map((option) => (
+                <Option key={option} value={option}>
+                  {option}
+                </Option>
+              ))}
+            </Select>
+            {isOther && (
+              <Input
+                value={record.itemType}
+                onChange={(e) => handleFieldChange(record.tempId!, "itemType", e.target.value)}
+                placeholder="Enter custom item type"
+                style={{ width: "60%" }}
+              />
+            )}
+          </Space.Compact>
+        );
+      },
     },
     {
       title: "Unit Rate",

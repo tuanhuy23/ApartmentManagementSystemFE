@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Table, Button, Space, Tag, Modal, Drawer, Form, Input, DatePicker, Select, App, Typography } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined, SearchOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined, SearchOutlined, ReloadOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { apartmentApi } from "../../api/apartmentApi";
 import { getErrorMessage } from "../../utils/errorHandler";
@@ -18,7 +18,7 @@ interface ResidentsTabProps {
 }
 
 const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
-  const { notification, modal } = App.useApp();
+  const { notification } = App.useApp();
   const [residents, setResidents] = useState<ResidentDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -26,22 +26,29 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isConfirmDrawerVisible, setIsConfirmDrawerVisible] = useState(false);
   const [selectedResident, setSelectedResident] = useState<ResidentDto | null>(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedResidentForDelete, setSelectedResidentForDelete] = useState<ResidentDto | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [form] = Form.useForm<ResidentDto>();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sorts, setSorts] = useState<SortQuery[]>([]);
-  const fetchedApartmentIdRef = useRef<string | null>(null);
-  const residentsAbortRef = useRef<AbortController | null>(null);
+  const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  const hasFetchedResidentsRef = useRef(false);
+  const lastRequestKeyRef = useRef<string>("");
   const memberType = Form.useWatch("memberType", form) || "MEMBER";
 
-  const fetchResidents = useCallback(async () => {
+  const fetchResidents = async () => {
     if (!apartmentId) return;
-    if (residentsAbortRef.current) {
-      residentsAbortRef.current.abort();
+    
+    const requestKey = JSON.stringify({ apartmentId, searchTerm, sorts, currentPage, pageSize });
+    
+    if (lastRequestKeyRef.current === requestKey) {
+      return;
     }
-    const abortController = new AbortController();
-    residentsAbortRef.current = abortController;
+    
+    lastRequestKeyRef.current = requestKey;
 
     try {
       setLoading(true);
@@ -62,35 +69,56 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
         limit: pageSize,
       });
       
-      if (!abortController.signal.aborted && response.data) {
+      if (response.data) {
         setResidents(response.data);
       }
     } catch (error: unknown) {
-      if (!abortController.signal.aborted) {
-        const errorMessage = getErrorMessage(error, "Failed to fetch residents");
-        notification.error({ message: errorMessage });
-      }
+      const errorMessage = getErrorMessage(error, "Failed to fetch residents");
+      notification.error({ message: errorMessage });
     } finally {
-      if (!abortController.signal.aborted) {
-        setLoading(false);
-      }
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!hasFetchedResidentsRef.current) {
+      hasFetchedResidentsRef.current = true;
+      fetchResidents();
+    } else {
+      fetchResidents();
     }
   }, [apartmentId, searchTerm, sorts, currentPage, pageSize]);
 
-  useEffect(() => {
-    if (apartmentId && fetchedApartmentIdRef.current !== apartmentId) {
-      fetchedApartmentIdRef.current = apartmentId;
-      fetchResidents();
+  const generatePassword = () => {
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const numbers = "0123456789";
+    const special = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+    
+    const allChars = lowercase + uppercase + numbers + special;
+    let password = "";
+    
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += special[Math.floor(Math.random() * special.length)];
+    
+    const minLength = 12;
+    for (let i = password.length; i < minLength; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
     }
-    return () => {
-      if (residentsAbortRef.current) {
-        residentsAbortRef.current.abort();
-      }
-    };
-  }, [apartmentId, fetchResidents]);
+    
+    password = password.split("").sort(() => Math.random() - 0.5).join("");
+    
+    setGeneratedPassword(password);
+    form.setFieldValue("password", password);
+    form.validateFields(["password"]);
+    notification.success({ message: "Password generated successfully!" });
+  };
 
   const handleCreate = () => {
     setSelectedResident(null);
+    setGeneratedPassword("");
     form.resetFields();
     form.setFieldsValue({ memberType: "MEMBER" });
     setIsModalVisible(true);
@@ -118,17 +146,28 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
     }
   };
 
-  const handleDelete = (resident: ResidentDto) => {
-    modal.confirm({
-      title: "Delete Resident",
-      content: `Are you sure you want to delete ${resident.name}?`,
-      okText: "Delete",
-      okType: "danger",
-      cancelText: "Cancel",
-      onOk: async () => {
-        notification.info({ message: "Delete functionality not implemented" });
-      },
-    });
+  const handleDeleteClick = (resident: ResidentDto) => {
+    setSelectedResidentForDelete(resident);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedResidentForDelete?.id || !apartmentId) return;
+
+    try {
+      setDeleting(true);
+      await apartmentApi.deleteResident(apartmentId, [selectedResidentForDelete.id]);
+      notification.success({ message: "Resident deleted successfully!" });
+      setDeleteModalVisible(false);
+      setSelectedResidentForDelete(null);
+      lastRequestKeyRef.current = "";
+      await fetchResidents();
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to delete resident");
+      notification.error({ message: errorMessage });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -153,15 +192,18 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
         brithDay: values.brithDay && dayjs.isDayjs(values.brithDay) ? values.brithDay.format("YYYY-MM-DD") : (values.brithDay || null),
         isOwner: values.memberType === "OWNER",
         memberType: values.memberType,
+        password: values.password || generatedPassword || "",
       };
 
       await apartmentApi.createResident(apartmentId, submitData);
       notification.success({ message: selectedResident ? "Resident updated successfully!" : "Resident created successfully!" });
       setIsModalVisible(false);
+      setGeneratedPassword("");
       form.resetFields();
-      fetchResidents();
-    } catch (error: any) {
-      if (error?.errorFields) {
+      lastRequestKeyRef.current = "";
+      await fetchResidents();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         notification.error({ message: "Please check your input" });
       } else {
         const errorMessage = getErrorMessage(error, "Failed to save resident");
@@ -184,6 +226,7 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
   const handleConfirmCancel = () => {
     setIsModalVisible(false);
     setIsConfirmDrawerVisible(false);
+    setGeneratedPassword("");
     form.resetFields();
   };
 
@@ -271,7 +314,7 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
           <Button
             type="text"
             icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
+            onClick={() => handleDeleteClick(record)}
             style={{ color: "#000" }}
           />
         </Space>
@@ -395,9 +438,13 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
           <Form.Item
             label="Name"
             name="name"
-            rules={[{ required: true, message: "Please enter name" }]}
+            rules={[
+              { required: true, message: "Please enter name" },
+              { min: 6, message: "Name must be at least 6 characters" },
+              { max: 100, message: "Name must not exceed 100 characters" },
+            ]}
           >
-            <Input />
+            <Input placeholder="Enter name" maxLength={100} />
           </Form.Item>
 
           <Form.Item
@@ -410,16 +457,42 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
           <Form.Item
             label="Identity Number"
             name="identityNumber"
+            rules={[
+              {
+                validator: (_, value) => {
+                  if (!value || value === "") {
+                    return Promise.resolve();
+                  }
+                  if (!/^\d+$/.test(value)) {
+                    return Promise.reject(new Error("Identity number must be numeric"));
+                  }
+                  if (value.length !== 12) {
+                    return Promise.reject(new Error("Identity number must be exactly 12 digits"));
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
           >
-            <Input />
+            <Input placeholder="Enter identity number" maxLength={12} />
           </Form.Item>
 
           <Form.Item
             label="Phone Number"
             name="phoneNumber"
-            rules={[{ required: true, message: "Please enter phone number" }]}
+            rules={[
+              { required: true, message: "Please enter phone number" },
+              {
+                pattern: /^\d+$/,
+                message: "Phone number must be numeric",
+              },
+              {
+                len: 10,
+                message: "Phone number must be exactly 10 digits",
+              },
+            ]}
           >
-            <Input />
+            <Input placeholder="Enter phone number" maxLength={10} />
           </Form.Item>
 
           <Form.Item
@@ -443,23 +516,59 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
                   { type: "email", message: "Please enter a valid email" },
                 ]}
               >
-                <Input />
+                <Input placeholder="Enter email" />
               </Form.Item>
 
               <Form.Item
                 label="Username"
                 name="userName"
-                rules={[{ required: true, message: "Please enter username" }]}
+                rules={[
+                  { required: true, message: "Please enter username" },
+                  { min: 8, message: "Username must be at least 8 characters" },
+                  { max: 32, message: "Username must not exceed 32 characters" },
+                ]}
               >
-                <Input />
+                <Input placeholder="Enter username" maxLength={32} />
               </Form.Item>
 
               <Form.Item
                 label="Password"
                 name="password"
-                rules={[{ required: true, message: "Please enter password" }]}
+                rules={[
+                  { required: true, message: "Please enter password" },
+                  { 
+                    min: 8, 
+                    message: "Password must be at least 8 characters" 
+                  },
+                  {
+                    pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+                    message: "Password must contain uppercase, lowercase, number and special character!"
+                  }
+                ]}
               >
-                <Input.Password />
+                <Space.Compact style={{ width: "100%" }}>
+                  <Input.Password 
+                    placeholder="Enter password"
+                    style={{ flex: 1 }}
+                    value={generatedPassword || form.getFieldValue("password")}
+                    onChange={(e) => {
+                      setGeneratedPassword(e.target.value);
+                      form.setFieldValue("password", e.target.value);
+                    }}
+                  />
+                  <Button 
+                    icon={<ReloadOutlined />}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      generatePassword();
+                    }}
+                    htmlType="button"
+                    type="default"
+                  >
+                    Auto Gen
+                  </Button>
+                </Space.Compact>
               </Form.Item>
             </>
           )}
@@ -522,6 +631,48 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
           </Button>
         </div>
       </Drawer>
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
+            Warning: Delete Resident
+          </span>
+        }
+        open={deleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setSelectedResidentForDelete(null);
+        }}
+        okText="Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true, loading: deleting }}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to delete <strong>{selectedResidentForDelete?.name}</strong>?
+          </p>
+          <div style={{ 
+            background: '#fff7e6', 
+            border: '1px solid #ffd591', 
+            borderRadius: 4, 
+            padding: 12,
+            marginTop: 16 
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>All information related to this resident will be permanently deleted</li>
+              <li>If this resident is an owner, their account access will be removed</li>
+              <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 };

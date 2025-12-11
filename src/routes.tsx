@@ -182,6 +182,15 @@ export default function AppRoutes() {
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
+      <Route path="/:apartmentBuildingId/requests/edit/:id" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <PermissionGuard permission="Permissions.RequestPermissions">
+              <RequestForm />
+            </PermissionGuard>
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
       <Route path="/:apartmentBuildingId/requests/:id" element={
         <AuthGuard>
           <ApartmentBuildingGuard>

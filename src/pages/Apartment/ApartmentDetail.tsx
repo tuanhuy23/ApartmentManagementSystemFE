@@ -124,13 +124,9 @@ const ApartmentDetail: React.FC = () => {
     try {
       setLoading(true);
       const response = await apartmentApi.getById(apartmentId);
-      if (!abortController.signal.aborted && response.data) {
-        setApartmentData(response.data);
-        apartmentForm.setFieldsValue({
-          name: response.data.name,
-          area: response.data.area,
-          floor: response.data.floor,
-        });
+      if (!abortController.signal.aborted && response && response.data) {
+        const apartmentData = response.data;
+        setApartmentData(apartmentData);
       }
     } catch (error: unknown) {
       if (!abortController.signal.aborted) {
@@ -142,7 +138,7 @@ const ApartmentDetail: React.FC = () => {
         setLoading(false);
       }
     }
-  }, [apartmentId, apartmentForm]);
+  }, [apartmentId, notification]);
 
   const fetchFeeNotices = useCallback(async () => {
     if (!apartmentId) return;
@@ -196,6 +192,16 @@ const ApartmentDetail: React.FC = () => {
       }
     };
   }, [apartmentId, fetchApartmentDetail, fetchFeeNotices, fetchUtilityReadings]);
+
+  useEffect(() => {
+    if (apartmentData && apartmentData.name && apartmentData.area !== undefined && apartmentData.floor !== undefined) {
+      apartmentForm.setFieldsValue({
+        name: apartmentData.name,
+        area: apartmentData.area,
+        floor: apartmentData.floor,
+      });
+    }
+  }, [apartmentData, apartmentForm]);
 
   const fetchFeeTypes = useCallback(async () => {
     try {
@@ -567,6 +573,7 @@ const ApartmentDetail: React.FC = () => {
       <Card
         title="Basic Information"
         style={{ marginBottom: 24 }}
+        loading={loading}
       >
         <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
           This area displays foundational data used for AREA and QUANTITY calculations, and determines the building that applies the price configuration.

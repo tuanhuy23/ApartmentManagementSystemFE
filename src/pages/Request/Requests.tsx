@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Table, Typography, Button, Space, App, Tag, Breadcrumb, Input } from "antd";
-import { PlusOutlined, QuestionCircleOutlined, EditOutlined, DeleteOutlined, HomeOutlined, EyeOutlined, SearchOutlined } from "@ant-design/icons";
+import React, { useEffect, useState, useRef } from "react";
+import { Table, Typography, Button, Space, App, Tag, Breadcrumb, Input, Modal } from "antd";
+import { PlusOutlined, QuestionCircleOutlined, EditOutlined, DeleteOutlined, HomeOutlined, EyeOutlined, SearchOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { requestApi } from "../../api/requestApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import { useAuth } from "../../hooks/useAuth";
 import { getErrorMessage } from "../../utils/errorHandler";
 import type { RequestDto } from "../../types/request";
 import type { ColumnsType } from "antd/es/table";
@@ -14,6 +15,7 @@ const { Title } = Typography;
 
 const Requests: React.FC = () => {
   const { notification } = App.useApp();
+  const { user } = useAuth();
   const [requests, setRequests] = useState<RequestDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,25 +24,21 @@ const Requests: React.FC = () => {
   const [sorts, setSorts] = useState<SortQuery[]>([]);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const requestKeyRef = useRef<string>("");
+  const hasFetchedRequestsRef = useRef(false);
+  const lastRequestKeyRef = useRef<string>("");
+  
+  const isResident = user?.roleName === "Resident";
 
-  const fetchRequests = useCallback(async () => {
+  const fetchRequests = async () => {
     if (!apartmentBuildingId) return;
 
     const requestKey = JSON.stringify({ apartmentBuildingId, searchTerm, sorts, currentPage, pageSize });
     
-    if (requestKeyRef.current === requestKey) {
+    if (lastRequestKeyRef.current === requestKey) {
       return;
     }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    requestKeyRef.current = requestKey;
+    
+    lastRequestKeyRef.current = requestKey;
 
     try {
       setLoading(true);
@@ -61,31 +59,31 @@ const Requests: React.FC = () => {
         limit: pageSize,
       });
       
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey && response.data) {
-        setRequests(response.data);
+      if (response && response.data) {
+        const requestsData = Array.isArray(response.data) ? response.data : [];
+        setRequests(requestsData);
+      } else {
+        setRequests([]);
       }
     } catch (error: unknown) {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        const errorMessage = getErrorMessage(error, "Failed to fetch requests");
-        notification.error({ message: errorMessage });
-      }
+      const errorMessage = getErrorMessage(error, "Failed to fetch requests");
+      notification.error({ message: errorMessage });
+      setRequests([]);
     } finally {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [apartmentBuildingId, searchTerm, sorts, currentPage, pageSize]);
+  };
 
   useEffect(() => {
     if (apartmentBuildingId) {
-      fetchRequests();
-    }
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      if (!hasFetchedRequestsRef.current) {
+        hasFetchedRequestsRef.current = true;
+        fetchRequests();
+      } else {
+        fetchRequests();
       }
-    };
-  }, [apartmentBuildingId, fetchRequests]);
+    }
+  }, [apartmentBuildingId, searchTerm, sorts, currentPage, pageSize]);
 
   const handleTableChange = (
     _pagination: any,
@@ -109,6 +107,37 @@ const Requests: React.FC = () => {
   const handleSearch = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
+  };
+
+  const handleDelete = (record: RequestDto) => {
+    console.log("handleDelete called", record);
+    if (!record.id) {
+      console.log("No record id");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Delete Request",
+      icon: <ExclamationCircleOutlined />,
+      content: `Are you sure you want to delete the request "${record.title}"? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          setLoading(true);
+          await requestApi.delete([record.id!]);
+          notification.success({ message: "Request deleted successfully!" });
+          lastRequestKeyRef.current = "";
+          fetchRequests();
+        } catch (error: unknown) {
+          const errorMessage = getErrorMessage(error, "Failed to delete request");
+          notification.error({ message: errorMessage });
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const columns: ColumnsType<RequestDto> = [
@@ -142,24 +171,32 @@ const Requests: React.FC = () => {
       width: 120,
       render: (_: unknown, record: RequestDto) => (
         <Space size="small">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => navigate(`/${apartmentBuildingId}/requests/${record.id}`)}
-            style={{ color: "#000" }}
-          />
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/${apartmentBuildingId}/requests/${record.id}`)}
-            style={{ color: "#000" }}
-          />
+          {isResident && record.status === "NEW" ? (
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/${apartmentBuildingId}/requests/edit/${record.id}`)}
+              style={{ color: "#000" }}
+            />
+          ) : (
+            <Button
+              type="link"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/${apartmentBuildingId}/requests/${record.id}`)}
+              style={{ color: "#000" }}
+            />
+          )}
           <Button
             type="text"
             icon={<DeleteOutlined />}
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log("Delete button clicked", record);
+              handleDelete(record);
             }}
-            style={{ color: "#000" }}
+            style={{ color: "#ff4d4f" }}
+            danger
           />
         </Space>
       ),
@@ -194,13 +231,15 @@ const Requests: React.FC = () => {
         <Title level={2}>
           <QuestionCircleOutlined /> Requests
         </Title>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={() => navigate(`/${apartmentBuildingId}/requests/create`)}
-        >
-          Create Request
-        </Button>
+        {isResident && (
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />}
+            onClick={() => navigate(`/${apartmentBuildingId}/requests/create`)}
+          >
+            Create Request
+          </Button>
+        )}
       </div>
 
       <div style={{ marginBottom: 16 }}>

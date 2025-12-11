@@ -1,8 +1,7 @@
 import axiosClient from "./axiosClient";
 import { getAppartmentBuildingId } from "../utils/token";
 import type { ApiResponse, FilterQuery, SortQuery } from "../types/apiResponse";
-import type { RequestDto } from "../types/request";
-import type { FeedbackDto } from "../types/feedback";
+import type { RequestDto, RequestHistoryDto, UpdateStatusAndAssignRequestDto, RattingRequestDto } from "../types/request";
 
 interface GetRequestsParams {
   filters?: FilterQuery[];
@@ -65,22 +64,6 @@ export const requestApi = {
     return axiosClient.put(`/${appartmentBuildingId}/request`, data);
   },
 
-  createFeedback: (data: FeedbackDto): Promise<ApiResponse<void>> => {
-    const appartmentBuildingId = getAppartmentBuildingId();
-    if (!appartmentBuildingId) {
-      return Promise.reject(new Error("AppartmentBuildingId is required"));
-    }
-    return axiosClient.post(`/${appartmentBuildingId}/request/feedback`, data);
-  },
-
-  updateFeedback: (data: FeedbackDto): Promise<ApiResponse<void>> => {
-    const appartmentBuildingId = getAppartmentBuildingId();
-    if (!appartmentBuildingId) {
-      return Promise.reject(new Error("AppartmentBuildingId is required"));
-    }
-    return axiosClient.put(`/${appartmentBuildingId}/request/feedback`, data);
-  },
-
   delete: (ids: string[]): Promise<ApiResponse<void>> => {
     const appartmentBuildingId = getAppartmentBuildingId();
     if (!appartmentBuildingId) {
@@ -89,12 +72,36 @@ export const requestApi = {
     return axiosClient.delete(`/${appartmentBuildingId}/request`, { data: ids });
   },
 
-  deleteFeedback: (ids: string[]): Promise<ApiResponse<void>> => {
+  createRequestAction: (data: RequestHistoryDto): Promise<ApiResponse<void>> => {
     const appartmentBuildingId = getAppartmentBuildingId();
     if (!appartmentBuildingId) {
       return Promise.reject(new Error("AppartmentBuildingId is required"));
     }
-    return axiosClient.delete(`/${appartmentBuildingId}/request/feedback`, { data: ids });
+    return axiosClient.post(`/${appartmentBuildingId}/request/request-action`, data);
+  },
+
+  updateRequestAction: (data: RequestHistoryDto): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.put(`/${appartmentBuildingId}/request/request-action`, data);
+  },
+
+  updateStatus: (data: UpdateStatusAndAssignRequestDto): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.put(`/${appartmentBuildingId}/request/status`, data);
+  },
+
+  updateRating: (data: RattingRequestDto): Promise<ApiResponse<void>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.put(`/${appartmentBuildingId}/request/ratting`, data);
   },
 };
 

@@ -28,3 +28,24 @@ export interface ActivityLogEntry {
   details?: string;
 }
 
+export interface RequestHistoryDto {
+  id?: string | null;
+  requestId: string;
+  description: string;
+  action?: string;
+  files?: FileAttachmentDto[];
+}
+
+export interface UpdateStatusAndAssignRequestDto {
+  requestId: string;
+  status: string;
+  assignee?: string | null;
+}
+
+export interface RattingRequestDto {
+  requestId: string;
+  rate: number;
+  description?: string;
+  files?: FileAttachmentDto[];
+}
+

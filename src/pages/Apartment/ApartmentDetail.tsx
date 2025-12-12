@@ -124,21 +124,27 @@ const ApartmentDetail: React.FC = () => {
     try {
       setLoading(true);
       const response = await apartmentApi.getById(apartmentId);
-      if (!abortController.signal.aborted && response && response.data) {
+      const isCurrentRequest = apartmentDetailAbortRef.current === abortController;
+      
+      if (isCurrentRequest && response && response.status === 200 && response.data) {
         const apartmentData = response.data;
         setApartmentData(apartmentData);
+        apartmentForm.setFieldsValue({
+          name: apartmentData.name || "",
+          area: apartmentData.area ?? 0,
+          floor: apartmentData.floor ?? 0,
+        });
       }
     } catch (error: unknown) {
-      if (!abortController.signal.aborted) {
+      const isCurrentRequest = apartmentDetailAbortRef.current === abortController;
+      if (isCurrentRequest) {
         const errorMessage = getErrorMessage(error, "Failed to fetch apartment details");
         notification.error({ message: errorMessage });
       }
     } finally {
-      if (!abortController.signal.aborted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [apartmentId, notification]);
+  }, [apartmentId, notification, apartmentForm]);
 
   const fetchFeeNotices = useCallback(async () => {
     if (!apartmentId) return;
@@ -149,7 +155,6 @@ const ApartmentDetail: React.FC = () => {
     feeNoticesAbortRef.current = abortController;
 
     try {
-      setLoading(true);
       const response = await feeApi.getByApartmentId(apartmentId);
       if (!abortController.signal.aborted && response.data) {
         const convertedNotices: FeeNotice[] = response.data.map((dto) => ({
@@ -166,12 +171,8 @@ const ApartmentDetail: React.FC = () => {
         const errorMessage = getErrorMessage(error, "Failed to fetch fee notices");
         notification.error({ message: errorMessage });
       }
-    } finally {
-      if (!abortController.signal.aborted) {
-        setLoading(false);
-      }
     }
-  }, [apartmentId]);
+  }, [apartmentId, notification]);
 
   useEffect(() => {
     if (apartmentId && fetchedApartmentIdRef.current !== apartmentId) {
@@ -194,11 +195,11 @@ const ApartmentDetail: React.FC = () => {
   }, [apartmentId, fetchApartmentDetail, fetchFeeNotices, fetchUtilityReadings]);
 
   useEffect(() => {
-    if (apartmentData && apartmentData.name && apartmentData.area !== undefined && apartmentData.floor !== undefined) {
+    if (apartmentData) {
       apartmentForm.setFieldsValue({
-        name: apartmentData.name,
-        area: apartmentData.area,
-        floor: apartmentData.floor,
+        name: apartmentData.name || "",
+        area: apartmentData.area ?? 0,
+        floor: apartmentData.floor ?? 0,
       });
     }
   }, [apartmentData, apartmentForm]);

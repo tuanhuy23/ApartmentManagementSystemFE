@@ -6,7 +6,6 @@ import {
   Button,
   Input,
   Space,
-  Tag,
   Divider,
   App,
   Breadcrumb,
@@ -14,6 +13,10 @@ import {
   Timeline,
   Avatar,
   Upload,
+  Form,
+  Select,
+  Row,
+  Col,
 } from "antd";
 import {
   HomeOutlined,
@@ -26,16 +29,16 @@ import {
 import { requestApi } from "../../api/requestApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { useAuth } from "../../hooks/useAuth";
-import { userApi } from "../../api/userApi";
 import { fileApi } from "../../api/fileApi";
 import { getErrorMessage } from "../../utils/errorHandler";
-import type { RequestDto, RequestHistoryDto } from "../../types/request";
+import type { RequestDto, RequestHistoryDto, UpdateStatusAndAssignRequestDto } from "../../types/request";
 import type { UserDto } from "../../types/user";
 import type { FileAttachmentDto } from "../../types/file";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+const { Option } = Select;
 
 const RequestDetail: React.FC = () => {
   const { notification } = App.useApp();
@@ -43,24 +46,27 @@ const RequestDetail: React.FC = () => {
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
   const { user } = useAuth();
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [request, setRequest] = useState<RequestDto | null>(null);
-  const [handlerUser, setHandlerUser] = useState<UserDto | null>(null);
+  const [userHandlers, setUserHandlers] = useState<UserDto[]>([]);
   const [comment, setComment] = useState("");
   const [commentFiles, setCommentFiles] = useState<FileAttachmentDto[]>([]);
   const requestAbortRef = useRef<AbortController | null>(null);
 
-  const getStatusColor = (status: string) => {
-    const colorMap: Record<string, string> = {
-      NEW: "default",
-      RECEIVED: "blue",
-      IN_PROGRESS: "orange",
-      COMPLETED: "green",
-      CANCELED: "red",
-    };
-    return colorMap[status] || "default";
-  };
+  const fetchUserHandlers = useCallback(async () => {
+    try {
+      const response = await requestApi.getUserHandlers();
+      if (response && response.data) {
+        setUserHandlers(response.data);
+      }
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to fetch user handlers");
+      notification.error({ message: errorMessage });
+    }
+  }, [notification]);
 
   const fetchRequest = useCallback(async () => {
     if (!id || !apartmentBuildingId) return;
@@ -73,33 +79,36 @@ const RequestDetail: React.FC = () => {
     try {
       setLoading(true);
       const response = await requestApi.getById(id);
-      if (!abortController.signal.aborted && response && response.data) {
+      const isCurrentRequest = requestAbortRef.current === abortController;
+      if (isCurrentRequest && response && response.data) {
         const data = Array.isArray(response.data) ? response.data[0] : response.data;
         if (data) {
           setRequest(data);
-
-          if (data.assignee) {
-            try {
-              const handlerResponse = await userApi.getById(data.assignee);
-              if (!abortController.signal.aborted && handlerResponse.data) {
-                setHandlerUser(handlerResponse.data);
-              }
-            } catch {
-            }
-          }
+          form.setFieldsValue({
+            status: data.status || "NEW",
+            handler: data.currentHandlerId || data.assignee || null,
+          });
         }
       }
     } catch (error: unknown) {
-      if (!abortController.signal.aborted) {
+      const isCurrentRequest = requestAbortRef.current === abortController;
+      if (isCurrentRequest) {
         const errorMessage = getErrorMessage(error, "Failed to fetch request details");
         notification.error({ message: errorMessage });
       }
     } finally {
-      if (!abortController.signal.aborted) {
+      const isCurrentRequest = requestAbortRef.current === abortController;
+      if (isCurrentRequest) {
         setLoading(false);
       }
     }
-  }, [id, apartmentBuildingId, notification]);
+  }, [id, apartmentBuildingId, notification, form]);
+
+  useEffect(() => {
+    if (apartmentBuildingId) {
+      fetchUserHandlers();
+    }
+  }, [apartmentBuildingId, fetchUserHandlers]);
 
   useEffect(() => {
     if (id && apartmentBuildingId) {
@@ -127,6 +136,37 @@ const RequestDetail: React.FC = () => {
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error, 'Failed to upload file');
       notification.error({ message: errorMessage });
+    }
+  };
+
+  const handleUpdateStatusAndHandler = async () => {
+    try {
+      await form.validateFields();
+      const values = form.getFieldsValue();
+      
+      if (!id) {
+        notification.error({ message: "Request ID is missing" });
+        return;
+      }
+
+      setUpdating(true);
+      const updateData: UpdateStatusAndAssignRequestDto = {
+        id: id,
+        status: values.status,
+        currentHandlerId: values.handler || null,
+      };
+
+      await requestApi.updateStatus(updateData);
+      notification.success({ message: "Status and handler updated successfully!" });
+      await fetchRequest();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        return;
+      }
+      const errorMessage = getErrorMessage(error, "Failed to update status and handler");
+      notification.error({ message: errorMessage });
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -217,21 +257,51 @@ const RequestDetail: React.FC = () => {
             <Text>{request?.title || "N/A"}</Text>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Status: </Text>
-            <Tag color={getStatusColor(request?.status || "NEW")}>
-              {request?.status || "NEW"}
-            </Tag>
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Handler: </Text>
-            {handlerUser ? (
-              <Text>{handlerUser.displayName} ({handlerUser.roleName})</Text>
-            ) : (
-              <Text type="secondary">Not assigned</Text>
-            )}
-          </div>
+          <Form form={form} layout="vertical" onFinish={handleUpdateStatusAndHandler}>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  label="Status"
+                  name="status"
+                  rules={[{ required: true, message: "Please select a status" }]}
+                >
+                  <Select placeholder="Select status">
+                    <Option value="NEW">NEW</Option>
+                    <Option value="PROCESSING">PROCESSING</Option>
+                    <Option value="COMPLETED">COMPLETED</Option>
+                    <Option value="CANCELED">CANCELED</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={12}>
+                <Form.Item
+                  label="Handler"
+                  name="handler"
+                >
+                  <Select 
+                    placeholder="Select handler"
+                    allowClear
+                    showSearch
+                    filterOption={(input, option) => {
+                      const label = option?.label || option?.children;
+                      return String(label || "").toLowerCase().includes(input.toLowerCase());
+                    }}
+                  >
+                    {userHandlers.map((user) => (
+                      <Option key={user.userId} value={user.userId}>
+                        {user.displayName} ({user.roleName})
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" loading={updating}>
+                Update Status & Handler
+              </Button>
+            </Form.Item>
+          </Form>
 
           <div style={{ marginBottom: 16 }}>
             <Text strong>Description: </Text>

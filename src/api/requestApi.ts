@@ -2,6 +2,7 @@ import axiosClient from "./axiosClient";
 import { getAppartmentBuildingId } from "../utils/token";
 import type { ApiResponse, FilterQuery, SortQuery } from "../types/apiResponse";
 import type { RequestDto, RequestHistoryDto, UpdateStatusAndAssignRequestDto, RattingRequestDto } from "../types/request";
+import type { UserDto } from "../types/user";
 
 interface GetRequestsParams {
   filters?: FilterQuery[];
@@ -102,6 +103,14 @@ export const requestApi = {
       return Promise.reject(new Error("AppartmentBuildingId is required"));
     }
     return axiosClient.put(`/${appartmentBuildingId}/request/ratting`, data);
+  },
+
+  getUserHandlers: (): Promise<ApiResponse<UserDto[]>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.get(`/${appartmentBuildingId}/request/user-handler`);
   },
 };
 

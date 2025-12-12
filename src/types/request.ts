@@ -13,6 +13,7 @@ export interface RequestDto {
   apartmentId?: string | null;
   requestType?: string;
   assignee?: string | null;
+  currentHandlerId?: string | null;
   internalNote?: string;
   submittedBy?: string;
   submittedOn?: string;
@@ -37,9 +38,9 @@ export interface RequestHistoryDto {
 }
 
 export interface UpdateStatusAndAssignRequestDto {
-  requestId: string;
-  status: string;
-  assignee?: string | null;
+  id: string;
+  status?: string;
+  currentHandlerId?: string | null;
 }
 
 export interface RattingRequestDto {

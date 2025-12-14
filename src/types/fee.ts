@@ -126,3 +126,8 @@ export interface FeeTier {
   to: number;
   rate: number;
 }
+
+export interface ImportFeeNoticeResult {
+  apartmentName: string;
+  errorMessage: string;
+}

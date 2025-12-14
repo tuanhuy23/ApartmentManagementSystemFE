@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Table, Typography, Button, Space, App, Breadcrumb, Input, Modal } from "antd";
-import { PlusOutlined, HomeOutlined, EyeOutlined, DeleteOutlined, SearchOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, HomeOutlined, EyeOutlined, DeleteOutlined, SearchOutlined, ExclamationCircleOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { apartmentApi } from "../../api/apartmentApi";
+import { feeApi } from "../../api/feeApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { getErrorMessage } from "../../utils/errorHandler";
 import type { ApartmentDto } from "../../types/apartment";
@@ -23,6 +24,7 @@ const Apartments: React.FC = () => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedApartment, setSelectedApartment] = useState<ApartmentDto | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
   const hasFetchedApartmentsRef = useRef(false);
@@ -128,6 +130,30 @@ const Apartments: React.FC = () => {
     setCurrentPage(1);
   };
 
+  const handleDownloadExcelTemplate = async () => {
+    try {
+      setDownloading(true);
+      const blob = await feeApi.downloadExcelTemplate();
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'fee-notice-import-template.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      notification.success({ message: "Excel template downloaded successfully!" });
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to download Excel template");
+      notification.error({ message: errorMessage });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const columns: ColumnType<ApartmentDto>[] = [
     {
       title: "Name",
@@ -208,13 +234,22 @@ const Apartments: React.FC = () => {
         <Title level={2}>
           <HomeOutlined /> Apartments Management
         </Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate(`/${apartmentBuildingId}/apartments/create`)}
-        >
-          Create New Apartment
-        </Button>
+        <Space>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadExcelTemplate}
+            loading={downloading}
+          >
+            Download Excel Template
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate(`/${apartmentBuildingId}/apartments/create`)}
+          >
+            Create New Apartment
+          </Button>
+        </Space>
       </div>
 
       <div style={{ marginBottom: 16 }}>

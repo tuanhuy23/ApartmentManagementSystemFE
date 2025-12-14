@@ -6,6 +6,7 @@ import type {
   CreateOrUpdateFeeNoticeDto,
   UtilityReadingDto,
 } from "../types/apartment";
+import type { ImportFeeNoticeResult } from "../types/fee";
 
 interface GetFeesByApartmentParams {
   filters?: FilterQuery[];
@@ -124,6 +125,33 @@ export const feeApi = {
       return Promise.reject(new Error("AppartmentBuildingId is required"));
     }
     return axiosClient.put(`/${appartmentBuildingId}/fee/${id}/update-payment-status-fee`);
+  },
+
+  downloadExcelTemplate: (): Promise<Blob> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+
+    return axiosClient.get(`/${appartmentBuildingId}/fee/download-excel-template`, {
+      responseType: 'blob',
+    }) as Promise<Blob>;
+  },
+
+  import: (file: File): Promise<ApiResponse<ImportFeeNoticeResult[]>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return axiosClient.post(`/${appartmentBuildingId}/fee/import`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   },
 };
 

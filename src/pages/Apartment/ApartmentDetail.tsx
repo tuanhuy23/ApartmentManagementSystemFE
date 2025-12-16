@@ -45,6 +45,8 @@ import type {
   ApartmentDto,
   UtilityReadingDto,
 } from "../../types/apartment";
+import type { FilterQuery, SortQuery } from "../../types/apiResponse";
+import { FilterOperator, SortDirection } from "../../types/apiResponse";
 import FeeNoticeDetailModal from "./FeeNoticeDetailModal";
 import ResidentsTab from "./ResidentsTab";
 
@@ -68,6 +70,7 @@ const ApartmentDetail: React.FC = () => {
   const [selectedFees, setSelectedFees] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [feeNoticeLoading, setFeeNoticeLoading] = useState(false);
   const [apartmentData, setApartmentData] = useState<ApartmentDto | null>(null);
   const [feeNotices, setFeeNotices] = useState<FeeNotice[]>([]);
   const [utilityReadings, setUtilityReadings] = useState<UtilityReading[]>([]);
@@ -76,42 +79,93 @@ const ApartmentDetail: React.FC = () => {
   const [allUtilityReadings, setAllUtilityReadings] = useState<UtilityReadingDto[]>([]);
   const [feeNoticeCurrentPage, setFeeNoticeCurrentPage] = useState(1);
   const [feeNoticePageSize, setFeeNoticePageSize] = useState(10);
+  const [feeNoticeSorts, setFeeNoticeSorts] = useState<SortQuery[]>([]);
   const [utilityReadingCurrentPage, setUtilityReadingCurrentPage] = useState(1);
   const [utilityReadingPageSize, setUtilityReadingPageSize] = useState(10);
+  const [utilityReadingLoading, setUtilityReadingLoading] = useState(false);
+  const [utilityReadingSorts, setUtilityReadingSorts] = useState<SortQuery[]>([]);
+  const utilityReadingsLastRequestKeyRef = useRef<string>("");
   const fetchedApartmentIdRef = useRef<string | null>(null);
   const utilityReadingsAbortRef = useRef<AbortController | null>(null);
   const apartmentDetailAbortRef = useRef<AbortController | null>(null);
-  const feeNoticesAbortRef = useRef<AbortController | null>(null);
+  const feeNoticesLastRequestKeyRef = useRef<string>("");
 
-  const fetchUtilityReadings = useCallback(async () => {
+  const fetchUtilityReadings = async () => {
     if (!apartmentId) return;
-    if (utilityReadingsAbortRef.current) {
-      utilityReadingsAbortRef.current.abort();
+    
+    const requestKey = JSON.stringify({ apartmentId, utilityReadingSearchText, utilityReadingSorts, utilityReadingCurrentPage, utilityReadingPageSize });
+    
+    if (utilityReadingsLastRequestKeyRef.current === requestKey) {
+      return;
     }
-    const abortController = new AbortController();
-    utilityReadingsAbortRef.current = abortController;
+    
+    utilityReadingsLastRequestKeyRef.current = requestKey;
 
     try {
-      const response = await feeApi.getUtilityReadings(apartmentId);
-      if (!abortController.signal.aborted && response.data) {
+      setUtilityReadingLoading(true);
+      const filters: FilterQuery[] = [];
+
+      if (utilityReadingSearchText) {
+        filters.push({
+          Code: "feeTypeName",
+          Operator: FilterOperator.Contains,
+          Value: utilityReadingSearchText,
+        });
+      }
+
+      const response = await feeApi.getUtilityReadings(apartmentId, {
+        filters: filters.length > 0 ? filters : undefined,
+        sorts: utilityReadingSorts.length > 0 ? utilityReadingSorts : undefined,
+        page: utilityReadingCurrentPage,
+        limit: utilityReadingPageSize,
+      });
+      
+      if (response.data) {
         setAllUtilityReadings(response.data);
-        const convertedReadings: UtilityReading[] = response.data.map((dto) => ({
-          id: dto.id,
-          type: dto.feeTypeName === "Electricity" ? "Electricity" : "Water",
-          readingDate: dto.readingDate,
-          readingValue: dto.currentReading,
-          consumption: 0,
-          unit: dto.feeTypeName === "Electricity" ? "kWh" : "m³",
-        }));
+        
+        // Sort by readingDate to calculate consumption correctly
+        const sortedData = [...response.data].sort((a, b) => {
+          const dateA = new Date(a.readingDate).getTime();
+          const dateB = new Date(b.readingDate).getTime();
+          return dateA - dateB;
+        });
+
+        // Group by feeTypeId to calculate consumption
+        const readingsByFeeType: Record<string, UtilityReadingDto[]> = {};
+        sortedData.forEach((dto) => {
+          if (!readingsByFeeType[dto.feeTypeId]) {
+            readingsByFeeType[dto.feeTypeId] = [];
+          }
+          readingsByFeeType[dto.feeTypeId].push(dto);
+        });
+
+        const convertedReadings: UtilityReading[] = response.data.map((dto) => {
+          const feeTypeReadings = readingsByFeeType[dto.feeTypeId] || [];
+          const currentIndex = feeTypeReadings.findIndex((r) => r.id === dto.id);
+          const previousReading = currentIndex > 0 ? feeTypeReadings[currentIndex - 1] : null;
+          
+          const consumption = previousReading 
+            ? dto.currentReading - previousReading.currentReading 
+            : 0;
+
+          return {
+            id: dto.id,
+            type: dto.feeTypeName === "Electricity" ? "Electricity" : "Water",
+            readingDate: dto.readingDate,
+            readingValue: dto.currentReading,
+            consumption: consumption > 0 ? consumption : 0,
+            unit: dto.feeTypeName === "Electricity" ? "kWh" : "m³",
+          };
+        });
         setUtilityReadings(convertedReadings);
       }
     } catch (error: unknown) {
-      if (!abortController.signal.aborted) {
-        const errorMessage = getErrorMessage(error, "Failed to fetch utility readings");
-        notification.error({ message: errorMessage });
-      }
+      const errorMessage = getErrorMessage(error, "Failed to fetch utility readings");
+      notification.error({ message: errorMessage });
+    } finally {
+      setUtilityReadingLoading(false);
     }
-  }, [apartmentId]);
+  };
 
   const fetchApartmentDetail = useCallback(async () => {
     if (!apartmentId) return;
@@ -146,17 +200,37 @@ const ApartmentDetail: React.FC = () => {
     }
   }, [apartmentId, notification, apartmentForm]);
 
-  const fetchFeeNotices = useCallback(async () => {
+  const fetchFeeNotices = async () => {
     if (!apartmentId) return;
-    if (feeNoticesAbortRef.current) {
-      feeNoticesAbortRef.current.abort();
+    
+    const requestKey = JSON.stringify({ apartmentId, feeNoticeSearchText, feeNoticeSorts, feeNoticeCurrentPage, feeNoticePageSize });
+    
+    if (feeNoticesLastRequestKeyRef.current === requestKey) {
+      return;
     }
-    const abortController = new AbortController();
-    feeNoticesAbortRef.current = abortController;
+    
+    feeNoticesLastRequestKeyRef.current = requestKey;
 
     try {
-      const response = await feeApi.getByApartmentId(apartmentId);
-      if (!abortController.signal.aborted && response.data) {
+      setFeeNoticeLoading(true);
+      const filters: FilterQuery[] = [];
+
+      if (feeNoticeSearchText) {
+        filters.push({
+          Code: "billingCycle",
+          Operator: FilterOperator.Contains,
+          Value: feeNoticeSearchText,
+        });
+      }
+
+      const response = await feeApi.getByApartmentId(apartmentId, {
+        filters: filters.length > 0 ? filters : undefined,
+        sorts: feeNoticeSorts.length > 0 ? feeNoticeSorts : undefined,
+        page: feeNoticeCurrentPage,
+        limit: feeNoticePageSize,
+      });
+      
+      if (response.data) {
         const convertedNotices: FeeNotice[] = response.data.map((dto) => ({
           id: dto.id,
           cycle: dto.billingCycle,
@@ -167,18 +241,19 @@ const ApartmentDetail: React.FC = () => {
         setFeeNotices(convertedNotices);
       }
     } catch (error: unknown) {
-      if (!abortController.signal.aborted) {
-        const errorMessage = getErrorMessage(error, "Failed to fetch fee notices");
-        notification.error({ message: errorMessage });
-      }
+      const errorMessage = getErrorMessage(error, "Failed to fetch fee notices");
+      notification.error({ message: errorMessage });
+    } finally {
+      setFeeNoticeLoading(false);
     }
-  }, [apartmentId, notification]);
+  };
 
   useEffect(() => {
     if (apartmentId && fetchedApartmentIdRef.current !== apartmentId) {
       fetchedApartmentIdRef.current = apartmentId;
+      feeNoticesLastRequestKeyRef.current = "";
+      utilityReadingsLastRequestKeyRef.current = "";
       fetchApartmentDetail();
-      fetchFeeNotices();
       fetchUtilityReadings();
     }
     return () => {
@@ -188,11 +263,22 @@ const ApartmentDetail: React.FC = () => {
       if (apartmentDetailAbortRef.current) {
         apartmentDetailAbortRef.current.abort();
       }
-      if (feeNoticesAbortRef.current) {
-        feeNoticesAbortRef.current.abort();
-      }
     };
-  }, [apartmentId, fetchApartmentDetail, fetchFeeNotices, fetchUtilityReadings]);
+  }, [apartmentId, fetchApartmentDetail]);
+
+  useEffect(() => {
+    if (apartmentId) {
+      utilityReadingsLastRequestKeyRef.current = "";
+      fetchUtilityReadings();
+    }
+  }, [apartmentId, utilityReadingSearchText, utilityReadingSorts, utilityReadingCurrentPage, utilityReadingPageSize]);
+
+  useEffect(() => {
+    if (apartmentId) {
+      feeNoticesLastRequestKeyRef.current = "";
+      fetchFeeNotices();
+    }
+  }, [apartmentId, feeNoticeSearchText, feeNoticeSorts, feeNoticeCurrentPage, feeNoticePageSize]);
 
   useEffect(() => {
     if (apartmentData) {
@@ -282,7 +368,7 @@ const ApartmentDetail: React.FC = () => {
       title: "Cycle",
       dataIndex: "cycle",
       key: "cycle",
-      sorter: (a, b) => a.cycle.localeCompare(b.cycle),
+      sorter: true,
       sortDirections: ["ascend", "descend"],
     },
     {
@@ -290,7 +376,7 @@ const ApartmentDetail: React.FC = () => {
       dataIndex: "totalAmount",
       key: "totalAmount",
       render: (amount: number) => formatCurrency(amount),
-      sorter: (a, b) => a.totalAmount - b.totalAmount,
+      sorter: true,
       sortDirections: ["ascend", "descend"],
     },
     {
@@ -298,7 +384,7 @@ const ApartmentDetail: React.FC = () => {
       dataIndex: "status",
       key: "status",
       render: (status: string) => getStatusTag(status),
-      sorter: (a, b) => a.status.localeCompare(b.status),
+      sorter: true,
       sortDirections: ["ascend", "descend"],
       filters: [
         { text: "DRAFT", value: "DRAFT" },
@@ -311,7 +397,7 @@ const ApartmentDetail: React.FC = () => {
       dataIndex: "paymentStatus",
       key: "paymentStatus",
       render: (paymentStatus: string) => getPaymentStatusTag(paymentStatus),
-      sorter: (a, b) => a.paymentStatus.localeCompare(b.paymentStatus),
+      sorter: true,
       sortDirections: ["ascend", "descend"],
       filters: [
         { text: "N/A", value: "N/A" },
@@ -370,7 +456,7 @@ const ApartmentDetail: React.FC = () => {
       dataIndex: "type",
       key: "type",
       render: (type: string) => type === "Electricity" ? "Electricity" : "Water",
-      sorter: (a, b) => a.type.localeCompare(b.type),
+      sorter: true,
       sortDirections: ["ascend", "descend"],
       filters: [
         { text: "Electricity", value: "Electricity" },
@@ -382,8 +468,12 @@ const ApartmentDetail: React.FC = () => {
       title: "Reading Date",
       dataIndex: "readingDate",
       key: "readingDate",
-      sorter: (a, b) => a.readingDate.localeCompare(b.readingDate),
+      sorter: true,
       sortDirections: ["ascend", "descend"],
+      render: (date: string) => {
+        if (!date || date === "0001-01-01T00:00:00") return "N/A";
+        return dayjs(date).format("DD/MM/YYYY");
+      },
     },
     {
       title: "Reading Value",
@@ -391,40 +481,58 @@ const ApartmentDetail: React.FC = () => {
       key: "readingValue",
       render: (value: number, record: UtilityReading) =>
         `${value} ${record.unit}`,
-      sorter: (a, b) => a.readingValue - b.readingValue,
-      sortDirections: ["ascend", "descend"],
-    },
-    {
-      title: "Consumption (Auto-calculated)",
-      dataIndex: "consumption",
-      key: "consumption",
-      render: (consumption: number, record: UtilityReading) =>
-        `${consumption} ${record.unit}`,
-      sorter: (a, b) => a.consumption - b.consumption,
+      sorter: true,
       sortDirections: ["ascend", "descend"],
     },
   ];
 
-  const filteredFeeNotices = feeNotices.filter((notice) => {
-    if (!feeNoticeSearchText) return true;
-    return (
-      notice.cycle.toLowerCase().includes(feeNoticeSearchText.toLowerCase()) ||
-      formatCurrency(notice.totalAmount).toLowerCase().includes(feeNoticeSearchText.toLowerCase()) ||
-      notice.status.toLowerCase().includes(feeNoticeSearchText.toLowerCase()) ||
-      notice.paymentStatus.toLowerCase().includes(feeNoticeSearchText.toLowerCase())
-    );
-  });
+  const handleFeeNoticeTableChange = (
+    _pagination: any,
+    _filters: any,
+    sorter: any
+  ) => {
+    if (sorter && sorter.columnKey) {
+      const newSorts: SortQuery[] = [
+        {
+          Code: sorter.columnKey,
+          Direction: sorter.order === "ascend" ? SortDirection.Ascending : SortDirection.Descending,
+        },
+      ];
+      setFeeNoticeSorts(newSorts);
+      setFeeNoticeCurrentPage(1);
+    } else {
+      setFeeNoticeSorts([]);
+    }
+  };
 
-  const filteredUtilityReadings = utilityReadings.filter((reading) => {
-    if (!utilityReadingSearchText) return true;
-    const typeText = reading.type === "Electricity" ? "Electricity" : "Water";
-    return (
-      typeText.toLowerCase().includes(utilityReadingSearchText.toLowerCase()) ||
-      reading.readingDate.toLowerCase().includes(utilityReadingSearchText.toLowerCase()) ||
-      reading.readingValue.toString().includes(utilityReadingSearchText) ||
-      reading.consumption.toString().includes(utilityReadingSearchText)
-    );
-  });
+  const handleFeeNoticeSearch = (value: string) => {
+    setFeeNoticeSearchText(value);
+    setFeeNoticeCurrentPage(1);
+  };
+
+  const handleUtilityReadingTableChange = (
+    _pagination: any,
+    _filters: any,
+    sorter: any
+  ) => {
+    if (sorter && sorter.columnKey) {
+      const newSorts: SortQuery[] = [
+        {
+          Code: sorter.columnKey,
+          Direction: sorter.order === "ascend" ? SortDirection.Ascending : SortDirection.Descending,
+        },
+      ];
+      setUtilityReadingSorts(newSorts);
+      setUtilityReadingCurrentPage(1);
+    } else {
+      setUtilityReadingSorts([]);
+    }
+  };
+
+  const handleUtilityReadingSearch = (value: string) => {
+    setUtilityReadingSearchText(value);
+    setUtilityReadingCurrentPage(1);
+  };
 
   const handleCreateInvoice = async () => {
     setIsModalVisible(true);
@@ -498,6 +606,7 @@ const ApartmentDetail: React.FC = () => {
       setIsModalVisible(false);
       form.resetFields();
       setSelectedFees([]);
+      feeNoticesLastRequestKeyRef.current = "";
       fetchFeeNotices();
       fetchUtilityReadings();
     } catch (error: any) {
@@ -696,12 +805,11 @@ const ApartmentDetail: React.FC = () => {
                           const value = e.target.value;
                           setFeeNoticeSearchText(value);
                           if (!value) {
-                            setFeeNoticeCurrentPage(1);
+                            handleFeeNoticeSearch("");
                           }
                         }}
                         onPressEnter={(e) => {
-                          setFeeNoticeSearchText((e.target as HTMLInputElement).value);
-                          setFeeNoticeCurrentPage(1);
+                          handleFeeNoticeSearch((e.target as HTMLInputElement).value);
                         }}
                         bordered={false}
                         style={{
@@ -718,9 +826,7 @@ const ApartmentDetail: React.FC = () => {
                       <Button
                         size="large"
                         icon={<SearchOutlined />}
-                        onClick={() => {
-                          setFeeNoticeCurrentPage(1);
-                        }}
+                        onClick={() => handleFeeNoticeSearch(feeNoticeSearchText)}
                         type="text"
                         style={{
                           border: 'none',
@@ -737,8 +843,10 @@ const ApartmentDetail: React.FC = () => {
 
                   <Table
                     columns={feeNoticeColumns}
-                    dataSource={filteredFeeNotices}
+                    dataSource={feeNotices}
                     rowKey="id"
+                    loading={feeNoticeLoading}
+                    onChange={handleFeeNoticeTableChange}
                     pagination={{
                       current: feeNoticeCurrentPage,
                       pageSize: feeNoticePageSize,
@@ -778,12 +886,11 @@ const ApartmentDetail: React.FC = () => {
                           const value = e.target.value;
                           setUtilityReadingSearchText(value);
                           if (!value) {
-                            setUtilityReadingCurrentPage(1);
+                            handleUtilityReadingSearch("");
                           }
                         }}
                         onPressEnter={(e) => {
-                          setUtilityReadingSearchText((e.target as HTMLInputElement).value);
-                          setUtilityReadingCurrentPage(1);
+                          handleUtilityReadingSearch((e.target as HTMLInputElement).value);
                         }}
                         bordered={false}
                         style={{
@@ -800,9 +907,7 @@ const ApartmentDetail: React.FC = () => {
                       <Button
                         size="large"
                         icon={<SearchOutlined />}
-                        onClick={() => {
-                          setUtilityReadingCurrentPage(1);
-                        }}
+                        onClick={() => handleUtilityReadingSearch(utilityReadingSearchText)}
                         type="text"
                         style={{
                           border: 'none',
@@ -819,8 +924,10 @@ const ApartmentDetail: React.FC = () => {
 
                   <Table
                     columns={utilityReadingColumns}
-                    dataSource={filteredUtilityReadings}
+                    dataSource={utilityReadings}
                     rowKey="id"
+                    loading={utilityReadingLoading}
+                    onChange={handleUtilityReadingTableChange}
                     pagination={{
                       current: utilityReadingCurrentPage,
                       pageSize: utilityReadingPageSize,
@@ -1072,8 +1179,10 @@ const ApartmentDetail: React.FC = () => {
 
             <Table
               columns={utilityReadingColumns}
-              dataSource={filteredUtilityReadings}
+              dataSource={utilityReadings}
               rowKey="id"
+              loading={utilityReadingLoading}
+              onChange={handleUtilityReadingTableChange}
               pagination={{
                 current: utilityReadingCurrentPage,
                 pageSize: utilityReadingPageSize,

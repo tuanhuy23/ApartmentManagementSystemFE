@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Typography, Tag, Descriptions, Spin, App, Card, Space, Divider } from "antd";
+import { Drawer, Typography, Tag, Descriptions, Spin, App, Card, Space, Divider, Button } from "antd";
+import { CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { feeApi } from "../../api/feeApi";
 import { feeConfigurationApi } from "../../api/feeConfigurationApi";
@@ -199,13 +200,22 @@ const FeeNoticeDetailModal: React.FC<FeeNoticeDetailModalProps> = ({
   };
 
   return (
-    <Modal
+    <Drawer
       title="Fee Notice Details"
       open={open}
-      onCancel={onClose}
-      footer={null}
-      width={1200}
-      centered
+      onClose={onClose}
+      width={800}
+      placement="right"
+      maskClosable={false}
+      closable={false}
+      extra={
+        <Button
+          type="text"
+          icon={<CloseOutlined />}
+          onClick={onClose}
+          style={{ padding: 0 }}
+        />
+      }
     >
       <Spin spinning={loading}>
         {feeNotice && (
@@ -213,7 +223,7 @@ const FeeNoticeDetailModal: React.FC<FeeNoticeDetailModalProps> = ({
             <Descriptions
               title="Basic Information"
               bordered
-              column={{ xxl: 3, xl: 3, lg: 2, md: 2, sm: 1, xs: 1 }}
+              column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}
               style={{ marginBottom: 24 }}
             >
               <Descriptions.Item label="Billing Cycle">
@@ -248,7 +258,7 @@ const FeeNoticeDetailModal: React.FC<FeeNoticeDetailModalProps> = ({
           </>
         )}
       </Spin>
-    </Modal>
+    </Drawer>
   );
 };
 

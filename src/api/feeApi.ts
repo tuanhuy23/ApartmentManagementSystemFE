@@ -36,7 +36,7 @@ export const feeApi = {
     if (params?.sorts && params.sorts.length > 0) {
       queryParams.append("sorts", JSON.stringify(params.sorts));
     }
-    
+
     const headers: Record<string, string> = {};
     if (params?.page) {
       headers.page = params.page.toString();
@@ -44,10 +44,10 @@ export const feeApi = {
     if (params?.limit) {
       headers.limit = params.limit.toString();
     }
-    
+
     const queryString = queryParams.toString();
     const url = `/${appartmentBuildingId}/fee/${apartmentId}${queryString ? `?${queryString}` : ""}`;
-    
+
     return axiosClient.get(url, { headers });
   },
 
@@ -88,7 +88,7 @@ export const feeApi = {
     if (params?.sorts && params.sorts.length > 0) {
       queryParams.append("sorts", JSON.stringify(params.sorts));
     }
-    
+
     const headers: Record<string, string> = {};
     if (params?.page) {
       headers.page = params.page.toString();
@@ -96,10 +96,10 @@ export const feeApi = {
     if (params?.limit) {
       headers.limit = params.limit.toString();
     }
-    
+
     const queryString = queryParams.toString();
     const url = `/${appartmentBuildingId}/fee/utility-reading/${apartmentId}${queryString ? `?${queryString}` : ""}`;
-    
+
     return axiosClient.get(url, { headers });
   },
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Table, Typography, Button, Space, App, Breadcrumb, Input, Modal } from "antd";
-import { PlusOutlined, HomeOutlined, EyeOutlined, DeleteOutlined, SearchOutlined, ExclamationCircleOutlined, DownloadOutlined } from "@ant-design/icons";
+import { PlusOutlined, HomeOutlined, EyeOutlined, DeleteOutlined, SearchOutlined, ExclamationCircleOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { apartmentApi } from "../../api/apartmentApi";
 import { feeApi } from "../../api/feeApi";
@@ -25,6 +25,8 @@ const Apartments: React.FC = () => {
   const [selectedApartment, setSelectedApartment] = useState<ApartmentDto | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
   const hasFetchedApartmentsRef = useRef(false);
@@ -32,17 +34,17 @@ const Apartments: React.FC = () => {
 
   const fetchApartments = async () => {
     const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
-    
+
     if (lastRequestKeyRef.current === requestKey) {
       return;
     }
-    
+
     lastRequestKeyRef.current = requestKey;
 
     try {
       setLoading(true);
       const filters: FilterQuery[] = [];
-      
+
       if (searchTerm) {
         filters.push({
           Code: "name",
@@ -57,7 +59,7 @@ const Apartments: React.FC = () => {
         page: currentPage,
         limit: pageSize,
       });
-      
+
       if (response.data) {
         setApartments(response.data);
       }
@@ -134,7 +136,7 @@ const Apartments: React.FC = () => {
     try {
       setDownloading(true);
       const blob = await feeApi.downloadExcelTemplate();
-      
+
       // Create a download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -144,13 +146,49 @@ const Apartments: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       notification.success({ message: "Excel template downloaded successfully!" });
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error, "Failed to download Excel template");
       notification.error({ message: errorMessage });
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      const response = await feeApi.import(file);
+
+      if (response.data && response.data.length > 0) {
+        const errors = response.data.filter(item => item.errorMessage);
+        if (errors.length > 0) {
+          notification.warning({
+            message: "Import completed with issues",
+            description: `${errors.length} items failed. Please check the response for details.`
+          });
+        } else {
+          notification.success({ message: "Import Fee Notice successfully!" });
+        }
+      } else {
+        notification.success({ message: "Import Fee Notice successfully!" });
+      }
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to import fee notice");
+      notification.error({ message: errorMessage });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -243,6 +281,20 @@ const Apartments: React.FC = () => {
             Download Excel Template
           </Button>
           <Button
+            icon={<UploadOutlined />}
+            onClick={handleImportClick}
+            loading={importing}
+          >
+            Import Fee Notice Excel
+          </Button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept=".xlsx, .xls"
+            onChange={handleFileChange}
+          />
+          <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => navigate(`/${apartmentBuildingId}/apartments/create`)}
@@ -253,8 +305,8 @@ const Apartments: React.FC = () => {
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           maxWidth: 400,
           borderRadius: '6px',
           overflow: 'hidden',
@@ -349,12 +401,12 @@ const Apartments: React.FC = () => {
           <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
             Are you sure you want to delete <strong>{selectedApartment?.name}</strong>?
           </p>
-          <div style={{ 
-            background: '#fff7e6', 
-            border: '1px solid #ffd591', 
-            borderRadius: 4, 
+          <div style={{
+            background: '#fff7e6',
+            border: '1px solid #ffd591',
+            borderRadius: 4,
             padding: 12,
-            marginTop: 16 
+            marginTop: 16
           }}>
             <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
               <ExclamationCircleOutlined style={{ marginRight: 8 }} />

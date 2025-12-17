@@ -19,6 +19,7 @@ import RequestForm from "./pages/Request/RequestForm";
 import RequestDetail from "./pages/Request/RequestDetail";
 import Roles from "./pages/Roles/Roles";
 import RoleForm from "./pages/Roles/RoleForm";
+import ImportFeeNoticeResultPage from "./pages/FeeNotice/ImportFeeNoticeResult";
 import Forbidden403 from "./pages/Error/Forbidden403";
 import NotFound404 from "./pages/Error/NotFound404";
 import AuthGuard from "./components/AuthGuard";
@@ -124,6 +125,15 @@ export default function AppRoutes() {
           <ApartmentBuildingGuard>
             <PermissionGuard permission="Permissions.ApartmentPermissions">
               <ApartmentDetail />
+            </PermissionGuard>
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/import-fee-notice-result" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <PermissionGuard permission="Permissions.ApartmentPermissions">
+              <ImportFeeNoticeResultPage />
             </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>

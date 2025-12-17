@@ -112,7 +112,7 @@ export interface FeeNotice {
   id: string;
   cycle: string;
   totalAmount: number;
-  status: "DRAFT" | "ISSUED";
+  status: "ISSUED" | "CANCELED";
   paymentStatus: "N/A" | "UNPAID" | "PAID";
 }
 

@@ -10,6 +10,7 @@ import type { ApartmentDto } from "../../types/apartment";
 import type { FilterQuery, SortQuery } from "../../types/apiResponse";
 import { FilterOperator, SortDirection } from "../../types/apiResponse";
 import type { ColumnType } from "antd/es/table";
+import { IMPORT_FEE_NOTICE_RESULT_KEY } from "../../constants/storageKeys";
 
 const { Title } = Typography;
 
@@ -169,18 +170,12 @@ const Apartments: React.FC = () => {
       const response = await feeApi.import(file);
 
       if (response.data && response.data.length > 0) {
-        const errors = response.data.filter(item => item.errorMessage);
-        if (errors.length > 0) {
-          notification.warning({
-            message: "Import completed with issues",
-            description: `${errors.length} items failed. Please check the response for details.`
-          });
-        } else {
-          notification.success({ message: "Import Fee Notice successfully!" });
-        }
-      } else {
-        notification.success({ message: "Import Fee Notice successfully!" });
+        sessionStorage.setItem(IMPORT_FEE_NOTICE_RESULT_KEY, JSON.stringify(response.data));
+        navigate(`/${apartmentBuildingId}/import-fee-notice-result`);
+        return;
       }
+
+      notification.success({ message: "Import Fee Notice successfully!" });
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error, "Failed to import fee notice");
       notification.error({ message: errorMessage });

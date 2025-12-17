@@ -19,15 +19,16 @@ import {
   Select,
   App,
   Tabs,
+  Modal,
 } from "antd";
 import {
   PlusOutlined,
   EyeOutlined,
   CloseOutlined,
   DeleteOutlined,
-  ReloadOutlined,
-  SendOutlined,
   SearchOutlined,
+  CreditCardOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -61,6 +62,13 @@ const ApartmentDetail: React.FC = () => {
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isConfirmDrawerVisible, setIsConfirmDrawerVisible] = useState(false);
   const [selectedFeeNoticeId, setSelectedFeeNoticeId] = useState<string | null>(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [cancelFeeModalVisible, setCancelFeeModalVisible] = useState(false);
+  const [updatePaymentStatusModalVisible, setUpdatePaymentStatusModalVisible] = useState(false);
+  const [selectedFeeNoticeForAction, setSelectedFeeNoticeForAction] = useState<FeeNotice | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [updatingPaymentStatus, setUpdatingPaymentStatus] = useState(false);
   const [form] = Form.useForm<InvoiceFormData>();
   const [apartmentForm] = Form.useForm();
   const [feeNoticeSearchText, setFeeNoticeSearchText] = useState("");
@@ -235,7 +243,7 @@ const ApartmentDetail: React.FC = () => {
           id: dto.id,
           cycle: dto.billingCycle,
           totalAmount: dto.totalAmount,
-          status: dto.status as "DRAFT" | "ISSUED",
+          status: dto.status as  "ISSUED" | "CANCELED",
           paymentStatus: dto.paymentStatus as "N/A" | "UNPAID" | "PAID",
         }));
         setFeeNotices(convertedNotices);
@@ -389,6 +397,7 @@ const ApartmentDetail: React.FC = () => {
       filters: [
         { text: "DRAFT", value: "DRAFT" },
         { text: "ISSUED", value: "ISSUED" },
+        { text: "CANCELED", value: "CANCELED" },
       ],
       onFilter: (value: any, record: FeeNotice) => record.status === value,
     },
@@ -409,44 +418,90 @@ const ApartmentDetail: React.FC = () => {
     {
       title: "Actions",
       key: "actions",
-      width: 150,
-      render: (_: unknown, record: FeeNotice) => (
-        <Space size="small">
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => {
-              setSelectedFeeNoticeId(record.id);
-              setIsDetailModalVisible(true);
-            }}
-            style={{ color: "#000" }}
-            title="View Details"
-          />
-          <Button
-            type="link"
-            icon={<ReloadOutlined />}
-            onClick={() => notification.info({ message: "Recalculate" })}
-            style={{ color: "#000" }}
-            title="Recalculate"
-          />
-          {record.status === "DRAFT" && (
+      width: 200,
+      render: (_: unknown, record: FeeNotice) => {
+        // If status is CANCELED: only View and Delete
+        if (record.status === "CANCELED") {
+          return (
+            <Space size="small">
+              <Button
+                type="link"
+                icon={<EyeOutlined />}
+                onClick={() => {
+                  setSelectedFeeNoticeId(record.id);
+                  setIsDetailModalVisible(true);
+                }}
+                style={{ color: "#000" }}
+                title="View Details"
+              />
+              <Button
+                type="link"
+                icon={<DeleteOutlined />}
+                onClick={() => {
+                  setSelectedFeeNoticeForAction(record);
+                  setDeleteModalVisible(true);
+                }}
+                style={{ color: "#000" }}
+                title="Delete"
+              />
+            </Space>
+          );
+        }
+
+        // If paymentStatus is PAID: only View
+        if (record.paymentStatus === "PAID") {
+          return (
+            <Space size="small">
+              <Button
+                type="link"
+                icon={<EyeOutlined />}
+                onClick={() => {
+                  setSelectedFeeNoticeId(record.id);
+                  setIsDetailModalVisible(true);
+                }}
+                style={{ color: "#000" }}
+                title="View Details"
+              />
+            </Space>
+          );
+        }
+
+        // Otherwise: View, Cancel Fee, and Update Payment Status
+        return (
+          <Space size="small">
             <Button
               type="link"
-              icon={<SendOutlined />}
-              onClick={() => notification.success({ message: "Issued successfully" })}
+              icon={<EyeOutlined />}
+              onClick={() => {
+                setSelectedFeeNoticeId(record.id);
+                setIsDetailModalVisible(true);
+              }}
               style={{ color: "#000" }}
-              title="Issue"
+              title="View Details"
             />
-          )}
-          <Button
-            type="link"
-            icon={<DeleteOutlined />}
-            onClick={() => notification.warning({ message: record.status === "DRAFT" ? "Draft cancelled" : "Revoked/Cancelled" })}
-            style={{ color: "#000" }}
-            title={record.status === "DRAFT" ? "Cancel Draft" : "Revoke/Cancel"}
-          />
-        </Space>
-      ),
+            <Button
+              type="link"
+              icon={<CloseOutlined />}
+              onClick={() => {
+                setSelectedFeeNoticeForAction(record);
+                setCancelFeeModalVisible(true);
+              }}
+              style={{ color: "#000" }}
+              title="Cancel Fee"
+            />
+            <Button
+              type="link"
+              icon={<CreditCardOutlined />}
+              onClick={() => {
+                setSelectedFeeNoticeForAction(record);
+                setUpdatePaymentStatusModalVisible(true);
+              }}
+              style={{ color: "#000" }}
+              title="Update Payment Status"
+            />
+          </Space>
+        );
+      },
     },
   ];
 
@@ -607,7 +662,7 @@ const ApartmentDetail: React.FC = () => {
       form.resetFields();
       setSelectedFees([]);
       feeNoticesLastRequestKeyRef.current = "";
-      fetchFeeNotices();
+      await fetchFeeNotices();
       fetchUtilityReadings();
     } catch (error: any) {
       if (error?.errorFields) {
@@ -670,6 +725,63 @@ const ApartmentDetail: React.FC = () => {
       notification.error({ message: errorMessage });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleCancelFeeConfirm = async () => {
+    if (!selectedFeeNoticeForAction?.id) return;
+
+    try {
+      setCanceling(true);
+      await feeApi.cancelFee(selectedFeeNoticeForAction.id);
+      notification.success({ message: "Fee notice canceled successfully!" });
+      setCancelFeeModalVisible(false);
+      setSelectedFeeNoticeForAction(null);
+      feeNoticesLastRequestKeyRef.current = "";
+      await fetchFeeNotices();
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to cancel fee notice");
+      notification.error({ message: errorMessage });
+    } finally {
+      setCanceling(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedFeeNoticeForAction?.id) return;
+
+    try {
+      setDeleting(true);
+      await feeApi.delete([selectedFeeNoticeForAction.id]);
+      notification.success({ message: "Fee notice deleted successfully!" });
+      setDeleteModalVisible(false);
+      setSelectedFeeNoticeForAction(null);
+      feeNoticesLastRequestKeyRef.current = "";
+      await fetchFeeNotices();
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to delete fee notice");
+      notification.error({ message: errorMessage });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleUpdatePaymentStatusConfirm = async () => {
+    if (!selectedFeeNoticeForAction?.id) return;
+
+    try {
+      setUpdatingPaymentStatus(true);
+      await feeApi.updatePaymentStatusFee(selectedFeeNoticeForAction.id);
+      notification.success({ message: "Payment status updated successfully!" });
+      setUpdatePaymentStatusModalVisible(false);
+      setSelectedFeeNoticeForAction(null);
+      feeNoticesLastRequestKeyRef.current = "";
+      await fetchFeeNotices();
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to update payment status");
+      notification.error({ message: errorMessage });
+    } finally {
+      setUpdatingPaymentStatus(false);
     }
   };
 
@@ -1247,6 +1359,116 @@ const ApartmentDetail: React.FC = () => {
           </Button>
         </div>
       </Drawer>
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
+            Warning: Cancel Fee Notice
+          </span>
+        }
+        open={cancelFeeModalVisible}
+        onOk={handleCancelFeeConfirm}
+        onCancel={() => {
+          setCancelFeeModalVisible(false);
+          setSelectedFeeNoticeForAction(null);
+        }}
+        okText="Cancel Fee"
+        cancelText="Close"
+        okButtonProps={{ danger: true, loading: canceling }}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to cancel this fee notice?
+          </p>
+          <div style={{
+            background: '#fff7e6',
+            border: '1px solid #ffd591',
+            borderRadius: 4,
+            padding: 12,
+            marginTop: 16
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>This fee notice will be marked as CANCELED</li>
+              <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
+            Warning: Delete Fee Notice
+          </span>
+        }
+        open={deleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setSelectedFeeNoticeForAction(null);
+        }}
+        okText="Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true, loading: deleting }}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to delete this fee notice?
+          </p>
+          <div style={{
+            background: '#fff7e6',
+            border: '1px solid #ffd591',
+            borderRadius: 4,
+            padding: 12,
+            marginTop: 16
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>This fee notice will be permanently deleted</li>
+              <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: '#1890ff', marginRight: 8 }} />
+            Confirm: Update Payment Status
+          </span>
+        }
+        open={updatePaymentStatusModalVisible}
+        onOk={handleUpdatePaymentStatusConfirm}
+        onCancel={() => {
+          setUpdatePaymentStatusModalVisible(false);
+          setSelectedFeeNoticeForAction(null);
+        }}
+        okText="Update"
+        cancelText="Cancel"
+        okButtonProps={{ loading: updatingPaymentStatus }}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to update the payment status of this fee notice?
+          </p>
+          <p style={{ margin: 0, color: '#595959' }}>
+            This will mark the fee notice as paid.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 };

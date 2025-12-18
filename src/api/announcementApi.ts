@@ -1,7 +1,7 @@
 import axiosClient from "./axiosClient";
 import { getAppartmentBuildingId } from "../utils/token";
 import type { ApiResponse, FilterQuery, SortQuery } from "../types/apiResponse";
-import type { AnnouncementDto } from "../types/announcement";
+import type { AnnouncementDto, ApartmentAnnouncementDto } from "../types/announcement";
 
 interface GetAnnouncementsParams {
   filters?: FilterQuery[];
@@ -69,6 +69,42 @@ export const announcementApi = {
       return Promise.reject(new Error("AppartmentBuildingId is required"));
     }
     return axiosClient.delete(`/${appartmentBuildingId}/announcement`, { data: ids });
+  },
+
+  downloadExcelTemplate: (): Promise<Blob> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+
+    return axiosClient.get(`/${appartmentBuildingId}/announcement/download-excel-template`, {
+      responseType: "blob",
+    }) as Promise<Blob>;
+  },
+
+  importApartment: (file: File): Promise<ApiResponse<ApartmentAnnouncementDto[]>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return axiosClient.post(`/${appartmentBuildingId}/announcement/import-aparment`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
+  getApartment: (): Promise<ApiResponse<ApartmentAnnouncementDto[]>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+
+    return axiosClient.get(`/${appartmentBuildingId}/announcement/apartments`);
   },
 };
 

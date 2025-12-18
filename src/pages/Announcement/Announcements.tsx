@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Table, Typography, Button, App, Tag, Breadcrumb, Input, Space } from "antd";
 import { PlusOutlined, NotificationOutlined, HomeOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
@@ -23,23 +23,17 @@ const Announcements: React.FC = () => {
   const [sorts, setSorts] = useState<SortQuery[]>([]);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const requestKeyRef = useRef<string>("");
+  const hasFetchedAnnouncementsRef = useRef(false);
+  const lastRequestKeyRef = useRef<string>("");
 
-  const fetchAnnouncements = useCallback(async () => {
+  const fetchAnnouncements = async () => {
     const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
     
-    if (requestKeyRef.current === requestKey) {
+    if (lastRequestKeyRef.current === requestKey) {
       return;
     }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-    requestKeyRef.current = requestKey;
+    
+    lastRequestKeyRef.current = requestKey;
 
     try {
       setLoading(true);
@@ -60,29 +54,25 @@ const Announcements: React.FC = () => {
         limit: pageSize,
       });
       
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey && response.data) {
+      if (response.data) {
         setAnnouncements(response.data);
       }
     } catch (error: unknown) {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        const errorMessage = getErrorMessage(error, "Failed to fetch announcements");
-        notification.error({ message: errorMessage });
-      }
+      const errorMessage = getErrorMessage(error, "Failed to fetch announcements");
+      notification.error({ message: errorMessage });
     } finally {
-      if (!abortController.signal.aborted && requestKeyRef.current === requestKey) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [searchTerm, sorts, currentPage, pageSize]);
+  };
 
   useEffect(() => {
-    fetchAnnouncements();
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchAnnouncements]);
+    if (!hasFetchedAnnouncementsRef.current) {
+      hasFetchedAnnouncementsRef.current = true;
+      fetchAnnouncements();
+    } else {
+      fetchAnnouncements();
+    }
+  }, [searchTerm, sorts, currentPage, pageSize]);
 
   const handleTableChange = (
     _pagination: any,

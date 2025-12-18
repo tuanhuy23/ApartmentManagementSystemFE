@@ -12,3 +12,8 @@ export interface AnnouncementDto {
   files: FileAttachmentDto[];
 }
 
+export interface ApartmentAnnouncementDto {
+  id: string;
+  name: string;
+}
+

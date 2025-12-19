@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Form, Input, Button, Card, Typography, Switch, DatePicker, App, Space, Select, Upload, Image } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, LoadingOutlined, DeleteOutlined } from "@ant-design/icons";
 import { announcementApi } from "../../api/announcementApi";
 import { fileApi } from "../../api/fileApi";
@@ -9,27 +9,42 @@ import { getApartmentBuildingIdFromToken } from "../../utils/token";
 import { getErrorMessage } from "../../utils/errorHandler";
 import type { AnnouncementDto, ApartmentAnnouncementDto } from "../../types/announcement";
 import type { FileAttachmentDto } from "../../types/file";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 
 const { Title } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
+type AnnouncementFormValues = Omit<AnnouncementDto, "publishDate" | "apartmentIds"> & {
+  publishDate?: Dayjs;
+  apartmentIds?: string[];
+};
+
 const AnnouncementForm: React.FC = () => {
   const { notification } = App.useApp();
-  const [form] = Form.useForm<AnnouncementDto>();
+  const [form] = Form.useForm<AnnouncementFormValues>();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const apartmentBuildingId = useApartmentBuildingId();
   const [loading, setLoading] = useState(false);
   const [apartments, setApartments] = useState<ApartmentAnnouncementDto[]>([]);
   const [loadingApartments, setLoadingApartments] = useState(false);
   const [images, setImages] = useState<FileAttachmentDto[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
+  const hasFetchedApartmentsRef = useRef(false);
+  const fetchedAnnouncementIdRef = useRef<string | null>(null);
+  const isEditMode = !!id;
   const isAll = Form.useWatch("isAll", form) || false;
 
   useEffect(() => {
+    if (hasFetchedApartmentsRef.current) {
+      return;
+    }
+    
     const fetchApartments = async () => {
       try {
+        hasFetchedApartmentsRef.current = true;
         setLoadingApartments(true);
         const response = await announcementApi.getApartment();
         if (response.data) {
@@ -38,6 +53,7 @@ const AnnouncementForm: React.FC = () => {
       } catch (error: unknown) {
         const errorMessage = getErrorMessage(error, "Failed to fetch apartments");
         notification.error({ message: errorMessage });
+        hasFetchedApartmentsRef.current = false; // Reset on error to allow retry
       } finally {
         setLoadingApartments(false);
       }
@@ -52,6 +68,49 @@ const AnnouncementForm: React.FC = () => {
     }
   }, [isAll, form]);
 
+  useEffect(() => {
+    if (!isEditMode || !id || id === "null" || id === "undefined") {
+      fetchedAnnouncementIdRef.current = null;
+      return;
+    }
+
+    // Check if we've already fetched this specific announcement
+    if (fetchedAnnouncementIdRef.current === id) {
+      return;
+    }
+
+    const fetchAnnouncement = async () => {
+      try {
+        fetchedAnnouncementIdRef.current = id;
+        setLoadingData(true);
+        const response = await announcementApi.getById(id);
+        if (response.data) {
+          const announcement = response.data;
+          form.setFieldsValue({
+            title: announcement.title,
+            body: announcement.body,
+            isAll: announcement.isAll,
+            apartmentIds: announcement.apartmentIds || [],
+            publishDate: announcement.publishDate ? dayjs(announcement.publishDate) : undefined,
+            status: announcement.status,
+          } as AnnouncementFormValues);
+          if (announcement.files) {
+            setImages(announcement.files);
+          }
+        }
+      } catch (error: unknown) {
+        fetchedAnnouncementIdRef.current = null; // Reset on error to allow retry
+        const errorMessage = getErrorMessage(error, "Failed to fetch announcement");
+        notification.error({ message: errorMessage });
+        navigate(`/${apartmentBuildingId}/announcements`);
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchAnnouncement();
+  }, [id, isEditMode, form, notification, navigate, apartmentBuildingId]);
+
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
@@ -65,21 +124,26 @@ const AnnouncementForm: React.FC = () => {
       setLoading(true);
 
       const submitData: AnnouncementDto = {
-        id: null,
+        id: isEditMode ? id : null,
         apartmentBuildingId: buildingId,
         title: values.title,
         body: values.body,
-        status: "DRAFT",
+        status: isEditMode ? values.status : "DRAFT",
         isAll: values.isAll || false,
         apartmentIds: values.isAll ? [] : (values.apartmentIds || []),
         publishDate: values.publishDate && dayjs.isDayjs(values.publishDate) 
           ? values.publishDate.format("YYYY-MM-DD") 
-          : dayjs().format("YYYY-MM-DD"),
+          : "",
         files: images,
       };
 
-      await announcementApi.create(submitData);
-      notification.success({ message: "Announcement created successfully!" });
+      if (isEditMode) {
+        await announcementApi.update(submitData);
+        notification.success({ message: "Announcement updated successfully!" });
+      } else {
+        await announcementApi.create(submitData);
+        notification.success({ message: "Announcement created successfully!" });
+      }
       navigate(`/${apartmentBuildingId}/announcements`);
     } catch (error: any) {
       if (error?.errorFields) {
@@ -128,7 +192,7 @@ const AnnouncementForm: React.FC = () => {
     <div style={{ padding: 24 }}>
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <Title level={2}>Create Announcement</Title>
+          <Title level={2}>{isEditMode ? "Edit Announcement" : "Create Announcement"}</Title>
           <Button 
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(`/${apartmentBuildingId}/announcements`)}
@@ -137,7 +201,7 @@ const AnnouncementForm: React.FC = () => {
           </Button>
         </div>
 
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={loadingData}>
           <Form.Item
             label="Title"
             name="title"
@@ -187,9 +251,23 @@ const AnnouncementForm: React.FC = () => {
           <Form.Item
             label="Publish Date"
             name="publishDate"
+            rules={[{ required: true, message: "Please select publish date" }]}
           >
             <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
           </Form.Item>
+
+          {isEditMode && (
+            <Form.Item
+              label="Status"
+              name="status"
+              rules={[{ required: true, message: "Please select status" }]}
+            >
+              <Select placeholder="Select status">
+                <Option value="PUBLISH">PUBLISH</Option>
+                <Option value="UNPUBLISH">UNPUBLISH</Option>
+              </Select>
+            </Form.Item>
+          )}
 
           <Title level={4} style={{ marginTop: 8 }}>Images</Title>
           <div style={{ marginBottom: 16 }}>
@@ -255,8 +333,8 @@ const AnnouncementForm: React.FC = () => {
 
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading}>
-                Create Announcement
+              <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading || loadingData}>
+                {isEditMode ? "Update Announcement" : "Create Announcement"}
               </Button>
               <Button onClick={() => navigate(`/${apartmentBuildingId}/announcements`)}>
                 Cancel

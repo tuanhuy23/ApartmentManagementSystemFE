@@ -290,16 +290,6 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
       render: (type: string) => <Tag>{type}</Tag>,
     },
     {
-      title: "Is Owner",
-      dataIndex: "isOwner",
-      key: "isOwner",
-      sorter: true,
-      sortDirections: ["ascend", "descend"],
-      render: (isOwner: boolean) => (
-        <Tag color={isOwner ? "green" : "default"}>{isOwner ? "Yes" : "No"}</Tag>
-      ),
-    },
-    {
       title: "Actions",
       key: "actions",
       width: 100,

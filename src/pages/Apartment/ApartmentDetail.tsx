@@ -420,7 +420,6 @@ const ApartmentDetail: React.FC = () => {
       key: "actions",
       width: 200,
       render: (_: unknown, record: FeeNotice) => {
-        // If status is CANCELED: only View and Delete
         if (record.status === "CANCELED") {
           return (
             <Space size="small">
@@ -447,8 +446,6 @@ const ApartmentDetail: React.FC = () => {
             </Space>
           );
         }
-
-        // If paymentStatus is PAID: only View
         if (record.paymentStatus === "PAID") {
           return (
             <Space size="small">
@@ -466,7 +463,6 @@ const ApartmentDetail: React.FC = () => {
           );
         }
 
-        // Otherwise: View, Cancel Fee, and Update Payment Status
         return (
           <Space size="small">
             <Button

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Table, Typography, Button, App, Tag, Breadcrumb, Input, Space } from "antd";
-import { PlusOutlined, NotificationOutlined, HomeOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Table, Typography, Button, App, Tag, Breadcrumb, Input, Space, Modal } from "antd";
+import { PlusOutlined, NotificationOutlined, HomeOutlined, SearchOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { announcementApi } from "../../api/announcementApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
@@ -21,6 +21,9 @@ const Announcements: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sorts, setSorts] = useState<SortQuery[]>([]);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementDto | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
   const hasFetchedAnnouncementsRef = useRef(false);
@@ -98,6 +101,39 @@ const Announcements: React.FC = () => {
     setCurrentPage(1);
   };
 
+  const handleDelete = (record: AnnouncementDto, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    
+    if (!record.id || record.id === "null" || record.id === "undefined") {
+      notification.error({ message: "Cannot delete announcement: ID is missing" });
+      return;
+    }
+
+    setSelectedAnnouncement(record);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedAnnouncement?.id) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      await announcementApi.delete([selectedAnnouncement.id]);
+      notification.success({ message: "Announcement deleted successfully!" });
+      setDeleteModalVisible(false);
+      setSelectedAnnouncement(null);
+      lastRequestKeyRef.current = "";
+      await fetchAnnouncements();
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to delete announcement");
+      notification.error({ message: errorMessage });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const columns: ColumnsType<AnnouncementDto> = [
     {
       title: "Title",
@@ -139,14 +175,19 @@ const Announcements: React.FC = () => {
           <Button
             type="text"
             icon={<EditOutlined style={{ color: "#000" }} />}
-            onClick={() => navigate(`/${apartmentBuildingId}/announcements/edit/${record.id}`)}
+            onClick={() => {
+              if (record.id && record.id !== "null" && record.id !== "undefined") {
+                navigate(`/${apartmentBuildingId}/announcements/edit/${record.id}`);
+              } else {
+                notification.error({ message: "Cannot edit announcement: ID is missing" });
+              }
+            }}
             style={{ color: "#000" }}
           />
           <Button
             type="text"
             icon={<DeleteOutlined style={{ color: "#000" }} />}
-            onClick={() => {
-            }}
+            onClick={(e) => handleDelete(record, e)}
             style={{ color: "#000" }}
           />
         </Space>
@@ -265,6 +306,47 @@ const Announcements: React.FC = () => {
         }}
         scroll={{ x: 800 }}
       />
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
+            Warning: Delete Announcement
+          </span>
+        }
+        open={deleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setSelectedAnnouncement(null);
+        }}
+        okText="Yes, Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true, loading: deleting }}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to delete <strong>"{selectedAnnouncement?.title}"</strong>?
+          </p>
+          <div style={{
+            background: '#fff7e6',
+            border: '1px solid #ffd591',
+            borderRadius: 4,
+            padding: 12,
+            marginTop: 16
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>This announcement will be permanently deleted</li>
+              <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

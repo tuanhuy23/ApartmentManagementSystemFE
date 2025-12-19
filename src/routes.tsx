@@ -174,6 +174,15 @@ export default function AppRoutes() {
           </ApartmentBuildingGuard>
         </AuthGuard>
       } />
+      <Route path="/:apartmentBuildingId/announcements/edit/:id" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <PermissionGuard permission="Permissions.NotificationPermissions">
+              <AnnouncementForm />
+            </PermissionGuard>
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
       <Route path="/:apartmentBuildingId/requests" element={
         <AuthGuard>
           <ApartmentBuildingGuard>

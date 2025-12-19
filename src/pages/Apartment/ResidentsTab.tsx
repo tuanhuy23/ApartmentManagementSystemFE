@@ -41,19 +41,19 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
 
   const fetchResidents = async () => {
     if (!apartmentId) return;
-    
+
     const requestKey = JSON.stringify({ apartmentId, searchTerm, sorts, currentPage, pageSize });
-    
+
     if (lastRequestKeyRef.current === requestKey) {
       return;
     }
-    
+
     lastRequestKeyRef.current = requestKey;
 
     try {
       setLoading(true);
       const filters: FilterQuery[] = [];
-      
+
       if (searchTerm) {
         filters.push({
           Code: "name",
@@ -68,7 +68,7 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
         page: currentPage,
         limit: pageSize,
       });
-      
+
       if (response.data) {
         setResidents(response.data);
       }
@@ -94,22 +94,22 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
     const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const numbers = "0123456789";
     const special = "!@#$%^&*()_+-=[]{}|;:,.<>?";
-    
+
     const allChars = lowercase + uppercase + numbers + special;
     let password = "";
-    
+
     password += lowercase[Math.floor(Math.random() * lowercase.length)];
     password += uppercase[Math.floor(Math.random() * uppercase.length)];
     password += numbers[Math.floor(Math.random() * numbers.length)];
     password += special[Math.floor(Math.random() * special.length)];
-    
+
     const minLength = 12;
     for (let i = password.length; i < minLength; i++) {
       password += allChars[Math.floor(Math.random() * allChars.length)];
     }
-    
+
     password = password.split("").sort(() => Math.random() - 0.5).join("");
-    
+
     setGeneratedPassword(password);
     form.setFieldValue("password", password);
     form.validateFields(["password"]);
@@ -219,7 +219,7 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     setIsConfirmDrawerVisible(true);
   };
 
@@ -321,8 +321,8 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           maxWidth: 400,
           borderRadius: '6px',
           overflow: 'hidden',
@@ -526,9 +526,9 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
                 name="password"
                 rules={[
                   { required: true, message: "Please enter password" },
-                  { 
-                    min: 8, 
-                    message: "Password must be at least 8 characters" 
+                  {
+                    min: 8,
+                    message: "Password must be at least 8 characters"
                   },
                   {
                     pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
@@ -537,7 +537,7 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
                 ]}
               >
                 <Space.Compact style={{ width: "100%" }}>
-                  <Input.Password 
+                  <Input.Password
                     placeholder="Enter password"
                     style={{ flex: 1 }}
                     value={generatedPassword || form.getFieldValue("password")}
@@ -546,7 +546,7 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
                       form.setFieldValue("password", e.target.value);
                     }}
                   />
-                  <Button 
+                  <Button
                     icon={<ReloadOutlined />}
                     onClick={(e) => {
                       e.preventDefault();
@@ -644,12 +644,12 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
           <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
             Are you sure you want to delete <strong>{selectedResidentForDelete?.name}</strong>?
           </p>
-          <div style={{ 
-            background: '#fff7e6', 
-            border: '1px solid #ffd591', 
-            borderRadius: 4, 
+          <div style={{
+            background: '#fff7e6',
+            border: '1px solid #ffd591',
+            borderRadius: 4,
             padding: 12,
-            marginTop: 16 
+            marginTop: 16
           }}>
             <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
               <ExclamationCircleOutlined style={{ marginRight: 8 }} />

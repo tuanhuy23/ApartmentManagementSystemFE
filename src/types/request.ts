@@ -17,22 +17,18 @@ export interface RequestDto {
   internalNote?: string;
   submittedBy?: string;
   submittedOn?: string;
-  activityLog?: ActivityLogEntry[];
+  requestHistories?: RequestHistoryDto[];
 }
 
-export interface ActivityLogEntry {
-  id: string;
-  timestamp: string;
-  actor: string;
-  actorRole: string;
-  action: string;
-  details?: string;
-}
 
 export interface RequestHistoryDto {
   id?: string | null;
   requestId: string;
-  description: string;
+  createdDate: string;
+  createdDisplayUser: string;
+  createdUserId: string;
+  actionType: string;
+  note: string;
   action?: string;
   files?: FileAttachmentDto[];
 }
@@ -47,6 +43,12 @@ export interface RattingRequestDto {
   requestId: string;
   rate: number;
   description?: string;
+  files?: FileAttachmentDto[];
+}
+
+export interface CreateRequestActionDto {
+  requestId: string;
+  note: string;
   files?: FileAttachmentDto[];
 }
 

@@ -22,28 +22,31 @@ const Requests: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sorts, setSorts] = useState<SortQuery[]>([]);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<RequestDto | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
   const hasFetchedRequestsRef = useRef(false);
   const lastRequestKeyRef = useRef<string>("");
-  
+
   const isResident = user?.roleName === "Resident";
 
   const fetchRequests = async () => {
     if (!apartmentBuildingId) return;
 
     const requestKey = JSON.stringify({ apartmentBuildingId, searchTerm, sorts, currentPage, pageSize });
-    
+
     if (lastRequestKeyRef.current === requestKey) {
       return;
     }
-    
+
     lastRequestKeyRef.current = requestKey;
 
     try {
       setLoading(true);
       const filters: FilterQuery[] = [];
-      
+
       if (searchTerm) {
         filters.push({
           Code: "title",
@@ -58,7 +61,7 @@ const Requests: React.FC = () => {
         page: currentPage,
         limit: pageSize,
       });
-      
+
       if (response && response.data) {
         const requestsData = Array.isArray(response.data) ? response.data : [];
         setRequests(requestsData);
@@ -110,34 +113,27 @@ const Requests: React.FC = () => {
   };
 
   const handleDelete = (record: RequestDto) => {
-    console.log("handleDelete called", record);
-    if (!record.id) {
-      console.log("No record id");
-      return;
-    }
+    setSelectedRequest(record);
+    setDeleteModalVisible(true);
+  };
 
-    Modal.confirm({
-      title: "Delete Request",
-      icon: <ExclamationCircleOutlined />,
-      content: `Are you sure you want to delete the request "${record.title}"? This action cannot be undone.`,
-      okText: "Delete",
-      okType: "danger",
-      cancelText: "Cancel",
-      onOk: async () => {
-        try {
-          setLoading(true);
-          await requestApi.delete([record.id!]);
-          notification.success({ message: "Request deleted successfully!" });
-          lastRequestKeyRef.current = "";
-          fetchRequests();
-        } catch (error: unknown) {
-          const errorMessage = getErrorMessage(error, "Failed to delete request");
-          notification.error({ message: errorMessage });
-        } finally {
-          setLoading(false);
-        }
-      },
-    });
+  const handleDeleteConfirm = async () => {
+    if (!selectedRequest || !selectedRequest.id) return;
+
+    try {
+      setDeleting(true);
+      await requestApi.delete([selectedRequest.id]);
+      notification.success({ message: "Request deleted successfully!" });
+      setDeleteModalVisible(false);
+      setSelectedRequest(null);
+      lastRequestKeyRef.current = "";
+      fetchRequests();
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to delete request");
+      notification.error({ message: errorMessage });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const columns: ColumnsType<RequestDto> = [
@@ -195,7 +191,7 @@ const Requests: React.FC = () => {
               console.log("Delete button clicked", record);
               handleDelete(record);
             }}
-            style={{ color: "#ff4d4f" }}
+            style={{ color: "#000" }}
             danger
           />
         </Space>
@@ -222,18 +218,18 @@ const Requests: React.FC = () => {
           },
         ]}
       />
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center", 
-        marginBottom: 24 
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 24
       }}>
         <Title level={2}>
           <QuestionCircleOutlined /> Requests
         </Title>
         {isResident && (
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             icon={<PlusOutlined />}
             onClick={() => navigate(`/${apartmentBuildingId}/requests/create`)}
           >
@@ -243,8 +239,8 @@ const Requests: React.FC = () => {
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           maxWidth: 400,
           borderRadius: '6px',
           overflow: 'hidden',
@@ -295,7 +291,7 @@ const Requests: React.FC = () => {
           />
         </div>
       </div>
-      
+
       <Table
         rowKey="id"
         dataSource={requests}
@@ -307,7 +303,7 @@ const Requests: React.FC = () => {
           pageSize: pageSize,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => 
+          showTotal: (total, range) =>
             `${range[0]}-${range[1]} of ${total} requests`,
           onChange: (page, size) => {
             setCurrentPage(page);
@@ -316,7 +312,51 @@ const Requests: React.FC = () => {
         }}
         scroll={{ x: 800 }}
       />
-    </div>
+
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: "#ff4d4f", marginRight: 8 }} />
+            Delete Request
+          </span>
+        }
+        open={deleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setSelectedRequest(null);
+        }}
+        okText="Delete"
+        okType="danger"
+        cancelText="Cancel"
+        confirmLoading={deleting}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to delete <strong>{selectedRequest?.title}</strong>?
+          </p>
+          <div style={{
+            background: '#fff7e6',
+            border: '1px solid #ffd591',
+            borderRadius: 4,
+            padding: 12,
+            marginTop: 16
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>This request will be permanently deleted</li>
+              <li>All data associated with this request will be lost</li>
+              <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
+    </div >
   );
 };
 

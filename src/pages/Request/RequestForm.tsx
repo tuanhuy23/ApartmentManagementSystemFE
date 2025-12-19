@@ -39,11 +39,11 @@ const RequestForm: React.FC = () => {
         newArray[index] = true;
         return newArray;
       });
-      
+
       const fileUrl = await fileApi.upload(file);
       const newFiles = [...files];
-      newFiles[index] = { 
-        ...newFiles[index], 
+      newFiles[index] = {
+        ...newFiles[index],
         src: fileUrl,
         fileType: file.type.startsWith('image/') ? 'IMAGE' : 'FILE',
         name: file.name,
@@ -145,7 +145,7 @@ const RequestForm: React.FC = () => {
     try {
       const values = await form.validateFields();
       const buildingId = getApartmentBuildingIdFromToken();
-      
+
       if (!buildingId) {
         notification.error({ message: "Apartment building ID not found" });
         return;
@@ -227,23 +227,23 @@ const RequestForm: React.FC = () => {
             name="description"
             rules={[{ required: true, message: "Please enter description" }]}
           >
-            <TextArea 
-              rows={6} 
-              placeholder="Describe the issue you are facing in detail... (Required)" 
+            <TextArea
+              rows={6}
+              placeholder="Describe the issue you are facing in detail... (Required)"
             />
           </Form.Item>
 
           <Title level={4}>Attachments (Optional)</Title>
           <div style={{ marginBottom: 24 }}>
-            <Button 
-              type="dashed" 
-              onClick={addFile} 
+            <Button
+              type="dashed"
+              onClick={addFile}
               icon={<PlusOutlined />}
               style={{ marginBottom: 16 }}
             >
               Upload File
             </Button>
-            
+
             {files.map((file, index) => (
               <Card key={index} size="small" style={{ marginBottom: 16 }}>
                 <div style={{ display: "grid", gap: 16, alignItems: "start" }}>
@@ -254,7 +254,7 @@ const RequestForm: React.FC = () => {
                         alt={`File ${index + 1} preview`}
                         width={150}
                         height={150}
-                        style={{ 
+                        style={{
                           objectFit: 'cover',
                           border: '1px solid #d9d9d9',
                           borderRadius: '6px'
@@ -262,22 +262,29 @@ const RequestForm: React.FC = () => {
                       />
                     </div>
                   )}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 16, alignItems: "center" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 16, alignItems: "center" }}>
+                      <Input
+                        placeholder="File name"
+                        value={file.name || ""}
+                        onChange={(e) => updateFile(index, "name", e.target.value)}
+                      />
+                      <Input
+                        placeholder="File URL (auto-filled after upload)"
+                        value={file.src || ""}
+                        readOnly
+                      />
+                      <Button
+                        type="text"
+                        danger
+                        icon={<MinusCircleOutlined />}
+                        onClick={() => removeFile(index)}
+                      />
+                    </div>
                     <Input
-                      placeholder="File name"
-                      value={file.name || ""}
-                      onChange={(e) => updateFile(index, "name", e.target.value)}
-                    />
-                    <Input
-                      placeholder="File URL (auto-filled after upload)"
-                      value={file.src || ""}
-                      readOnly
-                    />
-                    <Button 
-                      type="text" 
-                      danger 
-                      icon={<MinusCircleOutlined />}
-                      onClick={() => removeFile(index)}
+                      placeholder="Description"
+                      value={file.description || ""}
+                      onChange={(e) => updateFile(index, "description", e.target.value)}
                     />
                   </div>
                   <div style={{ marginTop: 8 }}>
@@ -296,7 +303,7 @@ const RequestForm: React.FC = () => {
                       }}
                       showUploadList={false}
                     >
-                      <Button 
+                      <Button
                         icon={uploadingFiles[index] ? <LoadingOutlined /> : <UploadOutlined />}
                         loading={uploadingFiles[index]}
                         size="small"

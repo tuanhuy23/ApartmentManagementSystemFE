@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, LoadingOutlined, Delet
 import { announcementApi } from "../../api/announcementApi";
 import { fileApi } from "../../api/fileApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import { useAuth } from "../../hooks/useAuth";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
 import { getErrorMessage } from "../../utils/errorHandler";
 import type { AnnouncementDto, ApartmentAnnouncementDto } from "../../types/announcement";
@@ -22,6 +23,7 @@ type AnnouncementFormValues = Omit<AnnouncementDto, "publishDate" | "apartmentId
 
 const AnnouncementForm: React.FC = () => {
   const { notification } = App.useApp();
+  const { user } = useAuth();
   const [form] = Form.useForm<AnnouncementFormValues>();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -36,12 +38,13 @@ const AnnouncementForm: React.FC = () => {
   const fetchedAnnouncementIdRef = useRef<string | null>(null);
   const isEditMode = !!id;
   const isAll = Form.useWatch("isAll", form) || false;
+  const isResident = user?.roleName === "Resident";
 
   useEffect(() => {
     if (hasFetchedApartmentsRef.current) {
       return;
     }
-    
+
     const fetchApartments = async () => {
       try {
         hasFetchedApartmentsRef.current = true;
@@ -115,7 +118,7 @@ const AnnouncementForm: React.FC = () => {
     try {
       const values = await form.validateFields();
       const buildingId = getApartmentBuildingIdFromToken();
-      
+
       if (!buildingId) {
         notification.error({ message: "Apartment building ID not found" });
         return;
@@ -131,8 +134,8 @@ const AnnouncementForm: React.FC = () => {
         status: isEditMode ? values.status : "DRAFT",
         isAll: values.isAll || false,
         apartmentIds: values.isAll ? [] : (values.apartmentIds || []),
-        publishDate: values.publishDate && dayjs.isDayjs(values.publishDate) 
-          ? values.publishDate.format("YYYY-MM-DD") 
+        publishDate: values.publishDate && dayjs.isDayjs(values.publishDate)
+          ? values.publishDate.format("YYYY-MM-DD")
           : "",
         files: images,
       };
@@ -192,8 +195,8 @@ const AnnouncementForm: React.FC = () => {
     <div style={{ padding: 24 }}>
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <Title level={2}>{isEditMode ? "Edit Announcement" : "Create Announcement"}</Title>
-          <Button 
+          <Title level={2}>{isResident ? "View Announcement" : isEditMode ? "Edit Announcement" : "Create Announcement"}</Title>
+          <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(`/${apartmentBuildingId}/announcements`)}
           >
@@ -207,7 +210,7 @@ const AnnouncementForm: React.FC = () => {
             name="title"
             rules={[{ required: true, message: "Please enter title" }]}
           >
-            <Input />
+            <Input disabled={isResident} />
           </Form.Item>
 
           <Form.Item
@@ -215,18 +218,20 @@ const AnnouncementForm: React.FC = () => {
             name="body"
             rules={[{ required: true, message: "Please enter body" }]}
           >
-            <TextArea rows={6} />
+            <TextArea rows={6} disabled={isResident} />
           </Form.Item>
 
-          <Form.Item
-            label="Is All"
-            name="isAll"
-            valuePropName="checked"
-          >
-            <Switch />
-          </Form.Item>
+          {!isResident && (
+            <Form.Item
+              label="Is All"
+              name="isAll"
+              valuePropName="checked"
+            >
+              <Switch disabled={isResident} />
+            </Form.Item>
+          )}
 
-          {!isAll && (
+          {!isAll && !isResident && (
             <Form.Item
               label="Apartment"
               name="apartmentIds"
@@ -253,10 +258,10 @@ const AnnouncementForm: React.FC = () => {
             name="publishDate"
             rules={[{ required: true, message: "Please select publish date" }]}
           >
-            <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" />
+            <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" disabled={isResident} />
           </Form.Item>
 
-          {isEditMode && (
+          {isEditMode && !isResident && (
             <Form.Item
               label="Status"
               name="status"
@@ -270,37 +275,39 @@ const AnnouncementForm: React.FC = () => {
           )}
 
           <Title level={4} style={{ marginTop: 8 }}>Images</Title>
-          <div style={{ marginBottom: 16 }}>
-            <Upload
-              multiple
-              customRequest={async (options) => {
-                const file = options.file as File;
-                await handleImageUpload(file);
-              }}
-              beforeUpload={(file) => {
-                const isImage = file.type.startsWith("image/");
-                if (!isImage) {
-                  notification.error({ message: "You can only upload image files!" });
-                  return false;
-                }
-                const isLt10M = file.size / 1024 / 1024 < 10;
-                if (!isLt10M) {
-                  notification.error({ message: "Image must be smaller than 10MB!" });
-                  return false;
-                }
-                return true;
-              }}
-              showUploadList={false}
-              accept="image/*"
-            >
-              <Button
-                icon={uploadingImages ? <LoadingOutlined /> : <UploadOutlined />}
-                loading={uploadingImages}
+          {!isResident && (
+            <div style={{ marginBottom: 16 }}>
+              <Upload
+                multiple
+                customRequest={async (options) => {
+                  const file = options.file as File;
+                  await handleImageUpload(file);
+                }}
+                beforeUpload={(file) => {
+                  const isImage = file.type.startsWith("image/");
+                  if (!isImage) {
+                    notification.error({ message: "You can only upload image files!" });
+                    return false;
+                  }
+                  const isLt10M = file.size / 1024 / 1024 < 10;
+                  if (!isLt10M) {
+                    notification.error({ message: "Image must be smaller than 10MB!" });
+                    return false;
+                  }
+                  return true;
+                }}
+                showUploadList={false}
+                accept="image/*"
               >
-                {uploadingImages ? "Uploading..." : "Upload Images"}
-              </Button>
-            </Upload>
-          </div>
+                <Button
+                  icon={uploadingImages ? <LoadingOutlined /> : <UploadOutlined />}
+                  loading={uploadingImages}
+                >
+                  {uploadingImages ? "Uploading..." : "Upload Images"}
+                </Button>
+              </Upload>
+            </div>
+          )}
 
           {images.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
@@ -318,29 +325,33 @@ const AnnouncementForm: React.FC = () => {
                     }}
                     preview
                   />
-                  <Button
-                    type="primary"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => removeImage(idx)}
-                    style={{ position: "absolute", top: 8, right: 8 }}
-                    size="small"
-                  />
+                  {!isResident && (
+                    <Button
+                      type="primary"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => removeImage(idx)}
+                      style={{ position: "absolute", top: 8, right: 8 }}
+                      size="small"
+                    />
+                  )}
                 </div>
               ))}
             </div>
           )}
 
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading || loadingData}>
-                {isEditMode ? "Update Announcement" : "Create Announcement"}
-              </Button>
-              <Button onClick={() => navigate(`/${apartmentBuildingId}/announcements`)}>
-                Cancel
-              </Button>
-            </Space>
-          </Form.Item>
+          {!isResident && (
+            <Form.Item>
+              <Space>
+                <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading || loadingData}>
+                  {isEditMode ? "Update Announcement" : "Create Announcement"}
+                </Button>
+                <Button onClick={() => navigate(`/${apartmentBuildingId}/announcements`)}>
+                  Cancel
+                </Button>
+              </Space>
+            </Form.Item>
+          )}
         </Form>
       </Card>
     </div>

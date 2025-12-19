@@ -31,7 +31,7 @@ import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { useAuth } from "../../hooks/useAuth";
 import { fileApi } from "../../api/fileApi";
 import { getErrorMessage } from "../../utils/errorHandler";
-import type { RequestDto, RequestHistoryDto, UpdateStatusAndAssignRequestDto } from "../../types/request";
+import type { RequestDto, RequestHistoryDto, UpdateStatusAndAssignRequestDto, CreateRequestActionDto } from "../../types/request";
 import type { UserDto } from "../../types/user";
 import type { FileAttachmentDto } from "../../types/file";
 import dayjs from "dayjs";
@@ -143,7 +143,7 @@ const RequestDetail: React.FC = () => {
     try {
       await form.validateFields();
       const values = form.getFieldsValue();
-      
+
       if (!id) {
         notification.error({ message: "Request ID is missing" });
         return;
@@ -178,9 +178,9 @@ const RequestDetail: React.FC = () => {
 
     try {
       setSending(true);
-      const commentData: RequestHistoryDto = {
+      const commentData: CreateRequestActionDto = {
         requestId: id,
-        description: comment,
+        note: comment,
         files: commentFiles.length > 0 ? commentFiles : undefined,
       };
 
@@ -197,17 +197,16 @@ const RequestDetail: React.FC = () => {
     }
   };
 
-  const activityLog = request?.activityLog || [];
-  if (!request?.activityLog || request.activityLog.length === 0) {
+  const activityLog: Partial<RequestHistoryDto>[] = [...(request?.requestHistories || [])];
+
+  if (request) {
     activityLog.push({
-      id: "initial",
-      timestamp: request?.submittedOn || new Date().toISOString(),
-      actor: user?.displayName || "Resident",
-      actorRole: user?.roleName || "Resident",
-      action: `Created Request: ${request?.description || ""}`,
-      details: request?.files && request.files.length > 0
-        ? `Attached: ${request.files.map(f => f.name).join(", ")}`
-        : undefined,
+      id: request.id,
+      createdDate: request.submittedOn || new Date().toISOString(),
+      createdDisplayUser: request.submittedBy || "Resident",
+      action: `Created Request: ${request.title}`,
+      note: request.description,
+      files: request.files
     });
   }
 
@@ -251,7 +250,7 @@ const RequestDetail: React.FC = () => {
       <Card loading={loading}>
         <div style={{ marginBottom: 24 }}>
           <Title level={4} style={{ marginBottom: 16 }}>Request Detail</Title>
-          
+
           <div style={{ marginBottom: 16 }}>
             <Text strong>Title: </Text>
             <Text>{request?.title || "N/A"}</Text>
@@ -278,7 +277,7 @@ const RequestDetail: React.FC = () => {
                   label="Handler"
                   name="handler"
                 >
-                  <Select 
+                  <Select
                     placeholder="Select handler"
                     allowClear
                     showSearch
@@ -337,22 +336,36 @@ const RequestDetail: React.FC = () => {
           <Title level={4} style={{ marginBottom: 16 }}>Activity Timeline</Title>
           <Timeline
             items={activityLog
-              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              .sort((a, b) => new Date(b.createdDate || "").getTime() - new Date(a.createdDate || "").getTime())
               .map((entry) => ({
                 dot: <Avatar icon={<UserOutlined />} />,
                 children: (
                   <div>
                     <div style={{ marginBottom: 4 }}>
-                      <Text strong>{entry.actor}</Text>
+                      <Text strong>{entry.createdDisplayUser}</Text>
                       <Text type="secondary" style={{ marginLeft: 8 }}>
-                        ({entry.actorRole}) - {dayjs(entry.timestamp).format("MMM DD, YYYY hh:mm A")}
+                        - {entry.createdDate ? dayjs(entry.createdDate).format("MMM DD, YYYY hh:mm A") : "N/A"}
                       </Text>
                     </div>
                     <div style={{ marginTop: 4 }}>
-                      <Text>{entry.action}</Text>
-                      {entry.details && (
-                        <div style={{ marginTop: 4, color: "#666" }}>
-                          <Text type="secondary">{entry.details}</Text>
+                      {entry.action && <Text strong>{entry.action}</Text>}
+                      {entry.action && entry.note && <br />}
+                      {entry.note && (
+                        <div style={{ color: "#666" }}>
+                          <Text>{entry.note}</Text>
+                        </div>
+                      )}
+
+                      {entry.files && entry.files.length > 0 && (
+                        <div style={{ marginTop: 8 }}>
+                          <Text type="secondary">Attached:</Text>
+                          <ul style={{ paddingLeft: 20, margin: "4px 0" }}>
+                            {entry.files.map((f, i) => (
+                              <li key={i}>
+                                <a href={f.src} target="_blank" rel="noopener noreferrer">{f.name}</a>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
                     </div>

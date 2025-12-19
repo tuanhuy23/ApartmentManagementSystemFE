@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Table, Typography, Button, App, Tag, Breadcrumb, Input, Space, Modal } from "antd";
-import { PlusOutlined, NotificationOutlined, HomeOutlined, SearchOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, NotificationOutlined, HomeOutlined, SearchOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, EyeOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { announcementApi } from "../../api/announcementApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import { useAuth } from "../../hooks/useAuth";
 import { getErrorMessage } from "../../utils/errorHandler";
 import type { AnnouncementDto } from "../../types/announcement";
 import type { FilterQuery, SortQuery } from "../../types/apiResponse";
@@ -15,6 +16,7 @@ const { Title } = Typography;
 
 const Announcements: React.FC = () => {
   const { notification } = App.useApp();
+  const { user } = useAuth();
   const [announcements, setAnnouncements] = useState<AnnouncementDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,19 +31,21 @@ const Announcements: React.FC = () => {
   const hasFetchedAnnouncementsRef = useRef(false);
   const lastRequestKeyRef = useRef<string>("");
 
+  const isResident = user?.roleName === "Resident";
+
   const fetchAnnouncements = async () => {
     const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
-    
+
     if (lastRequestKeyRef.current === requestKey) {
       return;
     }
-    
+
     lastRequestKeyRef.current = requestKey;
 
     try {
       setLoading(true);
       const filters: FilterQuery[] = [];
-      
+
       if (searchTerm) {
         filters.push({
           Code: "title",
@@ -56,7 +60,7 @@ const Announcements: React.FC = () => {
         page: currentPage,
         limit: pageSize,
       });
-      
+
       if (response.data) {
         setAnnouncements(response.data);
       }
@@ -103,7 +107,7 @@ const Announcements: React.FC = () => {
 
   const handleDelete = (record: AnnouncementDto, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    
+
     if (!record.id || record.id === "null" || record.id === "undefined") {
       notification.error({ message: "Cannot delete announcement: ID is missing" });
       return;
@@ -170,28 +174,46 @@ const Announcements: React.FC = () => {
       title: "Actions",
       key: "actions",
       width: 120,
-      render: (_: unknown, record: AnnouncementDto) => (
-        <Space size="small">
-          <Button
-            type="text"
-            icon={<EditOutlined style={{ color: "#000" }} />}
-            onClick={() => {
-              if (record.id && record.id !== "null" && record.id !== "undefined") {
-                navigate(`/${apartmentBuildingId}/announcements/edit/${record.id}`);
-              } else {
-                notification.error({ message: "Cannot edit announcement: ID is missing" });
-              }
-            }}
-            style={{ color: "#000" }}
-          />
-          <Button
-            type="text"
-            icon={<DeleteOutlined style={{ color: "#000" }} />}
-            onClick={(e) => handleDelete(record, e)}
-            style={{ color: "#000" }}
-          />
-        </Space>
-      ),
+      render: (_: unknown, record: AnnouncementDto) => {
+        if (isResident) {
+          return (
+            <Space size="small">
+              <Button
+                type="text"
+                icon={<EyeOutlined style={{ color: "#000" }} />}
+                onClick={() => {
+                  if (record.id && record.id !== "null" && record.id !== "undefined") {
+                    navigate(`/${apartmentBuildingId}/announcements/edit/${record.id}`);
+                  }
+                }}
+                style={{ color: "#000" }}
+              />
+            </Space>
+          );
+        }
+        return (
+          <Space size="small">
+            <Button
+              type="text"
+              icon={<EditOutlined style={{ color: "#000" }} />}
+              onClick={() => {
+                if (record.id && record.id !== "null" && record.id !== "undefined") {
+                  navigate(`/${apartmentBuildingId}/announcements/edit/${record.id}`);
+                } else {
+                  notification.error({ message: "Cannot edit announcement: ID is missing" });
+                }
+              }}
+              style={{ color: "#000" }}
+            />
+            <Button
+              type="text"
+              icon={<DeleteOutlined style={{ color: "#000" }} />}
+              onClick={(e) => handleDelete(record, e)}
+              style={{ color: "#000" }}
+            />
+          </Space>
+        );
+      },
     },
   ];
 
@@ -214,17 +236,17 @@ const Announcements: React.FC = () => {
           },
         ]}
       />
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center", 
-        marginBottom: 24 
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 24
       }}>
         <Title level={2}>
           <NotificationOutlined /> Announcements
         </Title>
-        <Button 
-          type="primary" 
+        <Button
+          type="primary"
           icon={<PlusOutlined />}
           onClick={() => navigate(`/${apartmentBuildingId}/announcements/create`)}
         >
@@ -233,8 +255,8 @@ const Announcements: React.FC = () => {
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           maxWidth: 400,
           borderRadius: '6px',
           overflow: 'hidden',
@@ -285,7 +307,7 @@ const Announcements: React.FC = () => {
           />
         </div>
       </div>
-      
+
       <Table
         rowKey="id"
         dataSource={announcements}
@@ -297,7 +319,7 @@ const Announcements: React.FC = () => {
           pageSize: pageSize,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => 
+          showTotal: (total, range) =>
             `${range[0]}-${range[1]} of ${total} announcements`,
           onChange: (page, size) => {
             setCurrentPage(page);

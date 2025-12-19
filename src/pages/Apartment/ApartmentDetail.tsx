@@ -100,13 +100,13 @@ const ApartmentDetail: React.FC = () => {
 
   const fetchUtilityReadings = async () => {
     if (!apartmentId) return;
-    
+
     const requestKey = JSON.stringify({ apartmentId, utilityReadingSearchText, utilityReadingSorts, utilityReadingCurrentPage, utilityReadingPageSize });
-    
+
     if (utilityReadingsLastRequestKeyRef.current === requestKey) {
       return;
     }
-    
+
     utilityReadingsLastRequestKeyRef.current = requestKey;
 
     try {
@@ -127,10 +127,10 @@ const ApartmentDetail: React.FC = () => {
         page: utilityReadingCurrentPage,
         limit: utilityReadingPageSize,
       });
-      
+
       if (response.data) {
         setAllUtilityReadings(response.data);
-        
+
         // Sort by readingDate to calculate consumption correctly
         const sortedData = [...response.data].sort((a, b) => {
           const dateA = new Date(a.readingDate).getTime();
@@ -151,9 +151,9 @@ const ApartmentDetail: React.FC = () => {
           const feeTypeReadings = readingsByFeeType[dto.feeTypeId] || [];
           const currentIndex = feeTypeReadings.findIndex((r) => r.id === dto.id);
           const previousReading = currentIndex > 0 ? feeTypeReadings[currentIndex - 1] : null;
-          
-          const consumption = previousReading 
-            ? dto.currentReading - previousReading.currentReading 
+
+          const consumption = previousReading
+            ? dto.currentReading - previousReading.currentReading
             : 0;
 
           return {
@@ -187,7 +187,7 @@ const ApartmentDetail: React.FC = () => {
       setLoading(true);
       const response = await apartmentApi.getById(apartmentId);
       const isCurrentRequest = apartmentDetailAbortRef.current === abortController;
-      
+
       if (isCurrentRequest && response && response.status === 200 && response.data) {
         const apartmentData = response.data;
         setApartmentData(apartmentData);
@@ -210,13 +210,13 @@ const ApartmentDetail: React.FC = () => {
 
   const fetchFeeNotices = async () => {
     if (!apartmentId) return;
-    
+
     const requestKey = JSON.stringify({ apartmentId, feeNoticeSearchText, feeNoticeSorts, feeNoticeCurrentPage, feeNoticePageSize });
-    
+
     if (feeNoticesLastRequestKeyRef.current === requestKey) {
       return;
     }
-    
+
     feeNoticesLastRequestKeyRef.current = requestKey;
 
     try {
@@ -237,13 +237,13 @@ const ApartmentDetail: React.FC = () => {
         page: feeNoticeCurrentPage,
         limit: feeNoticePageSize,
       });
-      
+
       if (response.data) {
         const convertedNotices: FeeNotice[] = response.data.map((dto) => ({
           id: dto.id,
           cycle: dto.billingCycle,
           totalAmount: dto.totalAmount,
-          status: dto.status as  "ISSUED" | "CANCELED",
+          status: dto.status as "ISSUED" | "CANCELED",
           paymentStatus: dto.paymentStatus as "N/A" | "UNPAID" | "PAID",
         }));
         setFeeNotices(convertedNotices);
@@ -677,7 +677,7 @@ const ApartmentDetail: React.FC = () => {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     setIsConfirmDrawerVisible(true);
   };
 
@@ -695,7 +695,7 @@ const ApartmentDetail: React.FC = () => {
     try {
       await apartmentForm.validateFields();
       const values = apartmentForm.getFieldsValue();
-      
+
       if (!apartmentId || !apartmentBuildingId) {
         notification.error({ message: "Missing required information" });
         return;
@@ -711,7 +711,7 @@ const ApartmentDetail: React.FC = () => {
 
       await apartmentApi.update(updateData);
       notification.success({ message: "Apartment updated successfully!" });
-      
+
       await fetchApartmentDetail();
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'errorFields' in error) {
@@ -896,8 +896,8 @@ const ApartmentDetail: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ 
-                      display: 'flex', 
+                    <div style={{
+                      display: 'flex',
                       maxWidth: 400,
                       borderRadius: '6px',
                       overflow: 'hidden',
@@ -977,8 +977,8 @@ const ApartmentDetail: React.FC = () => {
               children: (
                 <div>
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ 
-                      display: 'flex', 
+                    <div style={{
+                      display: 'flex',
                       maxWidth: 400,
                       borderRadius: '6px',
                       overflow: 'hidden',
@@ -1229,8 +1229,8 @@ const ApartmentDetail: React.FC = () => {
             </Text>
 
             <div style={{ marginBottom: 16 }}>
-              <div style={{ 
-                display: 'flex', 
+              <div style={{
+                display: 'flex',
                 maxWidth: 400,
                 borderRadius: '6px',
                 overflow: 'hidden',

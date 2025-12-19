@@ -1,7 +1,7 @@
 import axiosClient from "./axiosClient";
 import { getAppartmentBuildingId } from "../utils/token";
 import type { ApiResponse, FilterQuery, SortQuery } from "../types/apiResponse";
-import type { RequestDto, RequestHistoryDto, UpdateStatusAndAssignRequestDto, RattingRequestDto } from "../types/request";
+import type { RequestDto, RequestHistoryDto, UpdateStatusAndAssignRequestDto, RattingRequestDto, CreateRequestActionDto } from "../types/request";
 import type { UserDto } from "../types/user";
 
 interface GetRequestsParams {
@@ -25,7 +25,7 @@ export const requestApi = {
     if (params?.sorts && params.sorts.length > 0) {
       queryParams.append("sorts", JSON.stringify(params.sorts));
     }
-    
+
     const headers: Record<string, string> = {};
     if (params?.page) {
       headers.page = params.page.toString();
@@ -33,10 +33,10 @@ export const requestApi = {
     if (params?.limit) {
       headers.limit = params.limit.toString();
     }
-    
+
     const queryString = queryParams.toString();
     const url = `/${appartmentBuildingId}/request${queryString ? `?${queryString}` : ""}`;
-    
+
     return axiosClient.get(url, { headers });
   },
 
@@ -73,7 +73,7 @@ export const requestApi = {
     return axiosClient.delete(`/${appartmentBuildingId}/request`, { data: ids });
   },
 
-  createRequestAction: (data: RequestHistoryDto): Promise<ApiResponse<void>> => {
+  createRequestAction: (data: CreateRequestActionDto): Promise<ApiResponse<void>> => {
     const appartmentBuildingId = getAppartmentBuildingId();
     if (!appartmentBuildingId) {
       return Promise.reject(new Error("AppartmentBuildingId is required"));

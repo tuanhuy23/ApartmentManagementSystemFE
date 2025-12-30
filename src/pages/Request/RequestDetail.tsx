@@ -17,6 +17,10 @@ import {
   Select,
   Row,
   Col,
+  Descriptions,
+  Tag,
+  Badge,
+  Empty,
 } from "antd";
 import {
   HomeOutlined,
@@ -209,6 +213,30 @@ const RequestDetail: React.FC = () => {
       files: request.files
     });
   }
+  const statusColor = (status?: string) => {
+    switch ((status || "").toUpperCase()) {
+      case "NEW":
+        return "blue";
+      case "PROCESSING":
+        return "orange";
+      case "COMPLETED":
+        return "green";
+      case "CANCELED":
+        return "red";
+      default:
+        return "default";
+    }
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
 
   return (
     <div style={{ padding: 24 }}>
@@ -242,183 +270,199 @@ const RequestDetail: React.FC = () => {
           Back
         </Button>
         <Title level={2} style={{ margin: 0, flex: 1, textAlign: "center" }}>
-          REQUEST DETAIL
+          Request Detail
         </Title>
         <div style={{ width: 80 }} />
       </div>
 
-      <Card loading={loading}>
-        <div style={{ marginBottom: 24 }}>
-          <Title level={4} style={{ marginBottom: 16 }}>Request Detail</Title>
-
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Title: </Text>
-            <Text>{request?.title || "N/A"}</Text>
-          </div>
-
-          <Form form={form} layout="vertical" onFinish={handleUpdateStatusAndHandler}>
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  label="Status"
-                  name="status"
-                  rules={[{ required: true, message: "Please select a status" }]}
-                >
-                  <Select placeholder="Select status">
-                    <Option value="NEW">NEW</Option>
-                    <Option value="PROCESSING">PROCESSING</Option>
-                    <Option value="COMPLETED">COMPLETED</Option>
-                    <Option value="CANCELED">CANCELED</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  label="Handler"
-                  name="handler"
-                >
-                  <Select
-                    placeholder="Select handler"
-                    allowClear
-                    showSearch
-                    filterOption={(input, option) => {
-                      const label = option?.label || option?.children;
-                      return String(label || "").toLowerCase().includes(input.toLowerCase());
-                    }}
-                  >
-                    {userHandlers.map((user) => (
-                      <Option key={user.userId} value={user.userId}>
-                        {user.displayName} ({user.roleName})
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item>
-              <Button type="primary" htmlType="submit" loading={updating}>
-                Update Status & Handler
-              </Button>
-            </Form.Item>
-          </Form>
-
-          <div style={{ marginBottom: 16 }}>
-            <Text strong>Description: </Text>
-            <div style={{ marginTop: 8, padding: 12, backgroundColor: "#f5f5f5", borderRadius: 4 }}>
-              <Text>{request?.description || "N/A"}</Text>
+      <Card loading={loading} bodyStyle={{ padding: 20 }} style={{ borderRadius: 8 }}>
+        <Row gutter={24}>
+          <Col xs={24} lg={16}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
+              <Avatar size={64} style={{ backgroundColor: '#5b8cfa' }}>
+                {getInitials(request?.submittedBy)}
+              </Avatar>
+              <div>
+                <Title level={4} style={{ margin: 0 }}>{request?.title || "-"}</Title>
+                <div style={{ marginTop: 4 }}>
+                  <Text type="secondary">Submitted by </Text>
+                  <Text strong>{request?.submittedBy || "Resident"}</Text>
+                  <Text type="secondary" style={{ marginLeft: 12 }}>
+                    {request?.submittedOn ? dayjs(request.submittedOn).format('MMM DD, YYYY hh:mm A') : ''}
+                  </Text>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {request?.files && request.files.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <Text strong>Attachments: </Text>
-              <Space direction="vertical" style={{ marginTop: 8, width: "100%" }}>
-                {request.files.map((file, index) => (
-                  <div key={index}>
-                    <a href={file.src} target="_blank" rel="noopener noreferrer">
-                      <FileOutlined /> {file.name || `File ${index + 1}`}
-                    </a>
-                    {file.fileType === "IMAGE" && (
-                      <div style={{ marginTop: 8 }}>
-                        <Image src={file.src} width={200} />
+            <Descriptions column={1} bordered size="small">
+              <Descriptions.Item label={<Text strong>Status</Text>}>
+                <Tag color={statusColor(request?.status)}>{request?.status || 'N/A'}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label={<Text strong>Type</Text>}>
+                {request?.requestType || 'General'}
+              </Descriptions.Item>
+              <Descriptions.Item label={<Text strong>Apartment</Text>}>
+                {request?.apartmentId || 'N/A'}
+              </Descriptions.Item>
+              <Descriptions.Item label={<Text strong>Handler</Text>}>
+                {request?.currentHandlerId || request?.assignee || <Text type="secondary">Unassigned</Text>}
+              </Descriptions.Item>
+              <Descriptions.Item label={<Text strong>Internal Note</Text>}>
+                <div style={{ whiteSpace: 'pre-wrap', color: '#444' }}>{request?.internalNote || <Text type="secondary">-</Text>}</div>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div style={{ marginTop: 16 }}>
+              <Title level={5}>Description</Title>
+              <div style={{ marginTop: 8, padding: 14, backgroundColor: "#fafafa", borderRadius: 6, border: '1px solid #f0f0f0' }}>
+                <Text style={{ color: '#333' }}>{request?.description || 'No description provided.'}</Text>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <Title level={5}>Attachments</Title>
+              {request?.files && request.files.length > 0 ? (
+                <div style={{ marginTop: 8 }}>
+                  <Image.PreviewGroup>
+                    <Row gutter={[12, 12]}>
+                      {request.files.map((file, i) => (
+                        <Col key={i} xs={24} sm={12} md={8} lg={6}>
+                          <Card size="small" hoverable>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <FileOutlined style={{ fontSize: 20 }} />
+                              <div style={{ flex: 1 }}>
+                                <a href={file.src} target="_blank" rel="noopener noreferrer">{file.name || `File ${i+1}`}</a>
+                                {file.fileType === 'IMAGE' && (
+                                  <div style={{ marginTop: 8 }}>
+                                    <Image src={file.src} alt={file.name} style={{ maxHeight: 120, objectFit: 'cover' }} />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  </Image.PreviewGroup>
+                </div>
+              ) : (
+                <Empty description="No attachments" />
+              )}
+            </div>
+
+            <Divider />
+
+            <div>
+              <Title level={5}>Activity Timeline</Title>
+              <Timeline
+                mode="left"
+                items={activityLog
+                  .sort((a, b) => new Date(b.createdDate || "").getTime() - new Date(a.createdDate || "").getTime())
+                  .map((entry) => ({
+                    dot: <Avatar size={28} icon={<UserOutlined />} />,
+                    children: (
+                      <div style={{ padding: 8, borderRadius: 6, background: '#fff' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <Text strong>{entry.createdDisplayUser}</Text>
+                            <div><Text type="secondary">{entry.createdDate ? dayjs(entry.createdDate).format('MMM DD, YYYY hh:mm A') : ''}</Text></div>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 8 }}>
+                          {entry.action && <Text strong>{entry.action}</Text>}
+                          {entry.note && <div style={{ marginTop: 6, color: '#555' }}><Text>{entry.note}</Text></div>}
+                          {entry.files && entry.files.length > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                              <Text type="secondary">Attachments:</Text>
+                              <ul style={{ marginTop: 6, paddingLeft: 18 }}>
+                                {entry.files.map((f, i) => (
+                                  <li key={i}><a href={f.src} target="_blank" rel="noopener noreferrer">{f.name}</a></li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       </div>
+                    ),
+                  }))}
+              />
+            </div>
+          </Col>
+
+          <Col xs={24} lg={8}>
+            <div style={{ position: 'sticky', top: 24 }}>
+              <Card size="small" style={{ marginBottom: 16 }}>
+                <Form form={form} layout="vertical" onFinish={handleUpdateStatusAndHandler}>
+                  <Form.Item label={<Text strong>Status</Text>} name="status" rules={[{ required: true, message: 'Please select a status' }]}>
+                    <Select placeholder="Select status">
+                      <Option value="NEW">NEW</Option>
+                      <Option value="PROCESSING">PROCESSING</Option>
+                      <Option value="COMPLETED">COMPLETED</Option>
+                      <Option value="CANCELED">CANCELED</Option>
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item label={<Text strong>Handler</Text>} name="handler">
+                    <Select
+                      placeholder="Select handler"
+                      allowClear
+                      showSearch
+                      filterOption={(input, option) => {
+                        const label = option?.label || option?.children;
+                        return String(label || "").toLowerCase().includes(input.toLowerCase());
+                      }}
+                    >
+                      {userHandlers.map((user) => (
+                        <Option key={user.userId} value={user.userId}>
+                          {user.displayName} ({user.roleName})
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item>
+                    <Button type="primary" htmlType="submit" loading={updating} block>
+                      Update
+                    </Button>
+                  </Form.Item>
+                </Form>
+              </Card>
+
+              <Card size="small">
+                <Title level={5} style={{ marginBottom: 12 }}>Add Comment</Title>
+                <TextArea rows={4} placeholder="Enter message to update the manager..." value={comment} onChange={(e) => setComment(e.target.value)} />
+
+                <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <Upload
+                      customRequest={async (options) => {
+                        const file = options.file as File;
+                        await handleFileUpload(file);
+                      }}
+                      beforeUpload={(file) => {
+                        const isLt10M = file.size / 1024 / 1024 < 10;
+                        if (!isLt10M) {
+                          notification.error({ message: 'File must be smaller than 10MB!' });
+                          return false;
+                        }
+                        return true;
+                      }}
+                      showUploadList={false}
+                    >
+                      <Button icon={<PaperClipOutlined />}>Attach</Button>
+                    </Upload>
+                    {commentFiles.length > 0 && (
+                      <Text type="secondary" style={{ marginLeft: 8 }}>{commentFiles.length} file(s)</Text>
                     )}
                   </div>
-                ))}
-              </Space>
+                  <Button type="primary" icon={<SendOutlined />} onClick={handleSendComment} loading={sending}>
+                    Send
+                  </Button>
+                </div>
+              </Card>
             </div>
-          )}
-        </div>
-
-        <Divider />
-
-        <div style={{ marginBottom: 24 }}>
-          <Title level={4} style={{ marginBottom: 16 }}>Activity Timeline</Title>
-          <Timeline
-            items={activityLog
-              .sort((a, b) => new Date(b.createdDate || "").getTime() - new Date(a.createdDate || "").getTime())
-              .map((entry) => ({
-                dot: <Avatar icon={<UserOutlined />} />,
-                children: (
-                  <div>
-                    <div style={{ marginBottom: 4 }}>
-                      <Text strong>{entry.createdDisplayUser}</Text>
-                      <Text type="secondary" style={{ marginLeft: 8 }}>
-                        - {entry.createdDate ? dayjs(entry.createdDate).format("MMM DD, YYYY hh:mm A") : "N/A"}
-                      </Text>
-                    </div>
-                    <div style={{ marginTop: 4 }}>
-                      {entry.action && <Text strong>{entry.action}</Text>}
-                      {entry.action && entry.note && <br />}
-                      {entry.note && (
-                        <div style={{ color: "#666" }}>
-                          <Text>{entry.note}</Text>
-                        </div>
-                      )}
-
-                      {entry.files && entry.files.length > 0 && (
-                        <div style={{ marginTop: 8 }}>
-                          <Text type="secondary">Attached:</Text>
-                          <ul style={{ paddingLeft: 20, margin: "4px 0" }}>
-                            {entry.files.map((f, i) => (
-                              <li key={i}>
-                                <a href={f.src} target="_blank" rel="noopener noreferrer">{f.name}</a>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ),
-              }))}
-          />
-        </div>
-
-        <Divider />
-
-        <div>
-          <Title level={4} style={{ marginBottom: 16 }}>Additional Comments / Feedback</Title>
-          <TextArea
-            rows={4}
-            placeholder="Enter message to update the manager..."
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            style={{ marginBottom: 16 }}
-          />
-          <Space>
-            <Upload
-              customRequest={async (options) => {
-                const file = options.file as File;
-                await handleFileUpload(file);
-              }}
-              beforeUpload={(file) => {
-                const isLt10M = file.size / 1024 / 1024 < 10;
-                if (!isLt10M) {
-                  notification.error({ message: 'File must be smaller than 10MB!' });
-                  return false;
-                }
-                return true;
-              }}
-              showUploadList={false}
-            >
-              <Button icon={<PaperClipOutlined />}>
-                Attach
-              </Button>
-            </Upload>
-            {commentFiles.length > 0 && (
-              <Text type="secondary">{commentFiles.length} file(s) attached</Text>
-            )}
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              onClick={handleSendComment}
-              loading={sending}
-            >
-              Send Message
-            </Button>
-          </Space>
-        </div>
+          </Col>
+        </Row>
       </Card>
     </div>
   );

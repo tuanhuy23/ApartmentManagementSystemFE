@@ -35,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
     const refreshToken = tokenStorage.getRefreshToken();
     if (refreshToken) {
       try {
-        await accountApi.logout(refreshToken);
+        await accountApi.logout({ refreshToken });
       } catch (error) {
       }
     }

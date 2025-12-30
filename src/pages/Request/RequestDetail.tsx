@@ -5,7 +5,6 @@ import {
   Typography,
   Button,
   Input,
-  Space,
   Divider,
   App,
   Breadcrumb,
@@ -19,7 +18,6 @@ import {
   Col,
   Descriptions,
   Tag,
-  Badge,
   Empty,
 } from "antd";
 import {
@@ -32,7 +30,6 @@ import {
 } from "@ant-design/icons";
 import { requestApi } from "../../api/requestApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
-import { useAuth } from "../../hooks/useAuth";
 import { fileApi } from "../../api/fileApi";
 import { getErrorMessage } from "../../utils/errorHandler";
 import type { RequestDto, RequestHistoryDto, UpdateStatusAndAssignRequestDto, CreateRequestActionDto } from "../../types/request";
@@ -49,7 +46,6 @@ const RequestDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
-  const { user } = useAuth();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);

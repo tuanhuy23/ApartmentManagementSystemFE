@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Drawer, Table, Button, Space, Input, InputNumber, Form, App, Popconfirm, Switch, DatePicker } from "antd";
 import { PlusOutlined, CheckCircleOutlined, CloseCircleOutlined, CloseOutlined, EditOutlined, DeleteOutlined, SettingOutlined } from "@ant-design/icons";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import type { FeeType, FeeRateConfig } from "../../types/fee";
 import TierDetails from "./TierDetails";
 

@@ -50,5 +50,6 @@ export interface CreateRequestActionDto {
   requestId: string;
   note: string;
   files?: FileAttachmentDto[];
+  actionType: string;
 }
 

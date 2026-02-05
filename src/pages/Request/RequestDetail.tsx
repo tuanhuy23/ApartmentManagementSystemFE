@@ -32,7 +32,7 @@ import { requestApi } from "../../api/requestApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { fileApi } from "../../api/fileApi";
 import { getErrorMessage } from "../../utils/errorHandler";
-import type { RequestDto, RequestHistoryDto, UpdateStatusAndAssignRequestDto, CreateRequestActionDto } from "../../types/request";
+import type { RequestDto, UpdateStatusAndAssignRequestDto, CreateRequestActionDto } from "../../types/request";
 import type { UserDto } from "../../types/user";
 import type { FileAttachmentDto } from "../../types/file";
 import dayjs from "dayjs";
@@ -182,6 +182,7 @@ const RequestDetail: React.FC = () => {
         requestId: id,
         note: comment,
         files: commentFiles.length > 0 ? commentFiles : undefined,
+        actionType: "COMMENT",
       };
 
       await requestApi.createRequestAction(commentData);
@@ -197,18 +198,7 @@ const RequestDetail: React.FC = () => {
     }
   };
 
-  const activityLog: Partial<RequestHistoryDto>[] = [...(request?.requestHistories || [])];
-
-  if (request) {
-    activityLog.push({
-      id: request.id,
-      createdDate: request.submittedOn || new Date().toISOString(),
-      createdDisplayUser: request.submittedBy || "Resident",
-      action: `Created Request: ${request.title}`,
-      note: request.description,
-      files: request.files
-    });
-  }
+  const activityLog = [...(request?.requestHistories || [])].sort((a, b) => new Date(b.createdDate || "").getTime() - new Date(a.createdDate || "").getTime());
   const statusColor = (status?: string) => {
     switch ((status || "").toUpperCase()) {
       case "NEW":
@@ -301,7 +291,11 @@ const RequestDetail: React.FC = () => {
                 {request?.apartmentId || 'N/A'}
               </Descriptions.Item>
               <Descriptions.Item label={<Text strong>Handler</Text>}>
-                {request?.currentHandlerId || request?.assignee || <Text type="secondary">Unassigned</Text>}
+                {request?.currentHandlerId
+                  ? userHandlers.find((user) => user.userId === request.currentHandlerId)?.displayName ||
+                    userHandlers.find((user) => user.userId === request.currentHandlerId)?.userName ||
+                    "Unassigned"
+                  : request?.assignee || <Text type="secondary">Unassigned</Text>}
               </Descriptions.Item>
               <Descriptions.Item label={<Text strong>Internal Note</Text>}>
                 <div style={{ whiteSpace: 'pre-wrap', color: '#444' }}>{request?.internalNote || <Text type="secondary">-</Text>}</div>
@@ -360,13 +354,15 @@ const RequestDetail: React.FC = () => {
                       <div style={{ padding: 8, borderRadius: 6, background: '#fff' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
-                            <Text strong>{entry.createdDisplayUser}</Text>
+                            <Text strong>{entry.createdDisplayUser || (entry.actionType === "CREATED" ? "Resident" : "System")}</Text>
                             <div><Text type="secondary">{entry.createdDate ? dayjs(entry.createdDate).format('MMM DD, YYYY hh:mm A') : ''}</Text></div>
                           </div>
                         </div>
                         <div style={{ marginTop: 8 }}>
-                          {entry.action && <Text strong>{entry.action}</Text>}
-                          {entry.note && <div style={{ marginTop: 6, color: '#555' }}><Text>{entry.note}</Text></div>}
+                          {entry.actionType === "CREATED" && <Text strong>Created Request: {request?.title}</Text>}
+                          {entry.actionType === "COMMENT" && entry.note && <div style={{ marginTop: 6, color: '#555' }}><Text>{entry.note}</Text></div>}
+                          {entry.actionType === "STATUS_UPDATE" && entry.action && <Text strong>{entry.action}</Text>}
+                          {entry.actionType === "ASSIGNMENT" && entry.action && <Text strong>{entry.action}</Text>}
                           {entry.files && entry.files.length > 0 && (
                             <div style={{ marginTop: 8 }}>
                               <Text type="secondary">Attachments:</Text>

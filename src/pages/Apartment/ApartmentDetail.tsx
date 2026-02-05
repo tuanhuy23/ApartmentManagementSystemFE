@@ -94,6 +94,7 @@ const ApartmentDetail: React.FC = () => {
   const [utilityReadingLoading, setUtilityReadingLoading] = useState(false);
   const [utilityReadingSorts, setUtilityReadingSorts] = useState<SortQuery[]>([]);
   const [billingCycles, setBillingCycles] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("1");
   const utilityReadingsLastRequestKeyRef = useRef<string>("");
   const fetchedApartmentIdRef = useRef<string | null>(null);
   const utilityReadingsAbortRef = useRef<AbortController | null>(null);
@@ -264,7 +265,8 @@ const ApartmentDetail: React.FC = () => {
       feeNoticesLastRequestKeyRef.current = "";
       utilityReadingsLastRequestKeyRef.current = "";
       fetchApartmentDetail();
-      fetchUtilityReadings();
+      // Chỉ load fee notices khi trang được load (tab mặc định)
+      fetchFeeNotices();
     }
     return () => {
       if (utilityReadingsAbortRef.current) {
@@ -277,18 +279,18 @@ const ApartmentDetail: React.FC = () => {
   }, [apartmentId, fetchApartmentDetail]);
 
   useEffect(() => {
-    if (apartmentId) {
+    if (apartmentId && activeTab === "2") {
       utilityReadingsLastRequestKeyRef.current = "";
       fetchUtilityReadings();
     }
-  }, [apartmentId, utilityReadingSearchText, utilityReadingSorts, utilityReadingCurrentPage, utilityReadingPageSize]);
+  }, [apartmentId, activeTab, utilityReadingSearchText, utilityReadingSorts, utilityReadingCurrentPage, utilityReadingPageSize]);
 
   useEffect(() => {
-    if (apartmentId) {
+    if (apartmentId && activeTab === "1") {
       feeNoticesLastRequestKeyRef.current = "";
       fetchFeeNotices();
     }
-  }, [apartmentId, feeNoticeSearchText, feeNoticeSorts, feeNoticeCurrentPage, feeNoticePageSize]);
+  }, [apartmentId, activeTab, feeNoticeSearchText, feeNoticeSorts, feeNoticeCurrentPage, feeNoticePageSize]);
 
   useEffect(() => {
     if (apartmentData) {
@@ -889,7 +891,16 @@ const ApartmentDetail: React.FC = () => {
 
       <Card>
         <Tabs
-          defaultActiveKey="1"
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            // Reset request key để force reload khi chuyển tab
+            if (key === "1") {
+              feeNoticesLastRequestKeyRef.current = "";
+            } else if (key === "2") {
+              utilityReadingsLastRequestKeyRef.current = "";
+            }
+          }}
           items={[
             {
               key: "1",

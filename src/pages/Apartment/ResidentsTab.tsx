@@ -496,7 +496,7 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
             </Select>
           </Form.Item>
 
-          {memberType === "OWNER" && !selectedResident && (
+          {memberType === "OWNER" && (
             <>
               <Form.Item
                 label="Email"
@@ -506,7 +506,11 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
                   { type: "email", message: "Please enter a valid email" },
                 ]}
               >
-                <Input placeholder="Enter email" />
+                <Input 
+                  placeholder="Enter email" 
+                  readOnly={!!selectedResident}
+                  style={selectedResident ? { backgroundColor: "#f5f5f5" } : {}}
+                />
               </Form.Item>
 
               <Form.Item
@@ -518,48 +522,55 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
                   { max: 32, message: "Username must not exceed 32 characters" },
                 ]}
               >
-                <Input placeholder="Enter username" maxLength={32} />
+                <Input 
+                  placeholder="Enter username" 
+                  maxLength={32}
+                  readOnly={!!selectedResident}
+                  style={selectedResident ? { backgroundColor: "#f5f5f5" } : {}}
+                />
               </Form.Item>
 
-              <Form.Item
-                label="Password"
-                name="password"
-                rules={[
-                  { required: true, message: "Please enter password" },
-                  {
-                    min: 8,
-                    message: "Password must be at least 8 characters"
-                  },
-                  {
-                    pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-                    message: "Password must contain uppercase, lowercase, number and special character!"
-                  }
-                ]}
-              >
-                <Space.Compact style={{ width: "100%" }}>
-                  <Input.Password
-                    placeholder="Enter password"
-                    style={{ flex: 1 }}
-                    value={generatedPassword || form.getFieldValue("password")}
-                    onChange={(e) => {
-                      setGeneratedPassword(e.target.value);
-                      form.setFieldValue("password", e.target.value);
-                    }}
-                  />
-                  <Button
-                    icon={<ReloadOutlined />}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      generatePassword();
-                    }}
-                    htmlType="button"
-                    type="default"
-                  >
-                    Auto Gen
-                  </Button>
-                </Space.Compact>
-              </Form.Item>
+              {!selectedResident && (
+                <Form.Item
+                  label="Password"
+                  name="password"
+                  rules={[
+                    { required: true, message: "Please enter password" },
+                    {
+                      min: 8,
+                      message: "Password must be at least 8 characters"
+                    },
+                    {
+                      pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+                      message: "Password must contain uppercase, lowercase, number and special character!"
+                    }
+                  ]}
+                >
+                  <Space.Compact style={{ width: "100%" }}>
+                    <Input.Password
+                      placeholder="Enter password"
+                      style={{ flex: 1 }}
+                      value={generatedPassword || form.getFieldValue("password")}
+                      onChange={(e) => {
+                        setGeneratedPassword(e.target.value);
+                        form.setFieldValue("password", e.target.value);
+                      }}
+                    />
+                    <Button
+                      icon={<ReloadOutlined />}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        generatePassword();
+                      }}
+                      htmlType="button"
+                      type="default"
+                    >
+                      Auto Gen
+                    </Button>
+                  </Space.Compact>
+                </Form.Item>
+              )}
             </>
           )}
         </Form>

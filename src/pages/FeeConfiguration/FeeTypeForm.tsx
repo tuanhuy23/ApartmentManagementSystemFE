@@ -100,8 +100,8 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
           : null,
         isActive: feeType ? isActive : true,
         isVATApplicable: isVATApplicable,
-        quantityRates: feeType?.quantityRates || tempFeeType?.quantityRates || [],
-        rateConfigs: feeType?.rateConfigs || tempFeeType?.rateConfigs || [],
+        quantityRates: tempFeeType?.quantityRates || feeType?.quantityRates || [],
+        rateConfigs: tempFeeType?.rateConfigs || feeType?.rateConfigs || [],
       };
       onSave(feeTypeData);
     });

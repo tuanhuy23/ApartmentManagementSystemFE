@@ -20,7 +20,8 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({ children, permission 
 
   const hasPermission = 
     user.permissions.includes(`${permission}.Read`) || 
-    user.permissions.includes(`${permission}.ReadWrite`);
+    user.permissions.includes(`${permission}.ReadWrite`)
+    || user.permissions.includes(`${permission}.ReadRetrict`);
 
   if (!hasPermission) {
     return <Navigate to="/403" replace />;

@@ -10,6 +10,7 @@ import {
   NotificationOutlined,
   QuestionCircleOutlined,
   SafetyOutlined,
+  TransactionOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
@@ -41,8 +42,14 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
     if (!user?.permissions || user.permissions.length === 0) {
       return false;
     }
-    return user.permissions.includes(`${permissionName}.Read`) || 
-           user.permissions.includes(`${permissionName}.ReadWrite`);
+    if (user.permissions.includes(`${permissionName}.ReadRetrict`)){
+      return true;
+    } else
+    {
+      return user.permissions.includes(`${permissionName}.Read`) || 
+      user.permissions.includes(`${permissionName}.ReadWrite`);
+    }
+    
   };
 
   const allMenuItems = [
@@ -87,6 +94,12 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
       icon: <CalendarOutlined />,
       label: "Billing Cycle",
       permission: "Permissions.FeeConfigurationPermissions",
+    },
+    {
+      key: getPathWithApartmentId("/fee-notice"),
+      icon: <TransactionOutlined />,
+      label: "Fee Notice",
+      permission: "Permissions.FeeNoticePermissions",
     },
     {
       key: getPathWithApartmentId("/announcements"),

@@ -51,6 +51,42 @@ export const feeApi = {
     return axiosClient.get(url, { headers });
   },
 
+  getResidentFeeNotices: (params?: GetFeesByApartmentParams): Promise<ApiResponse<FeeNoticeDto[]>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params?.filters && params.filters.length > 0) {
+      queryParams.append("filters", JSON.stringify(params.filters));
+    }
+    if (params?.sorts && params.sorts.length > 0) {
+      queryParams.append("sorts", JSON.stringify(params.sorts));
+    }
+
+    const headers: Record<string, string> = {};
+    if (params?.page) {
+      headers.page = params.page.toString();
+    }
+    if (params?.limit) {
+      headers.limit = params.limit.toString();
+    }
+
+    const queryString = queryParams.toString();
+    const url = `/${appartmentBuildingId}/fee/resident/${queryString ? `?${queryString}` : ""}`;
+
+    return axiosClient.get(url, { headers });
+  },
+
+  getResidentFeeNoticeById: (id: string): Promise<ApiResponse<FeeNoticeDto>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.get(`/${appartmentBuildingId}/fee/resident/${id}`);
+  },
+
   getById: (id: string): Promise<ApiResponse<FeeNoticeDto>> => {
     const appartmentBuildingId = getAppartmentBuildingId();
     if (!appartmentBuildingId) {

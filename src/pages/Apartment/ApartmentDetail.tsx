@@ -50,6 +50,7 @@ import type { FilterQuery, SortQuery } from "../../types/apiResponse";
 import { FilterOperator, SortDirection } from "../../types/apiResponse";
 import FeeNoticeDetailModal from "./FeeNoticeDetailModal";
 import ResidentsTab from "./ResidentsTab";
+import ParkingTab from "./ParkingTab";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -92,6 +93,7 @@ const ApartmentDetail: React.FC = () => {
   const [utilityReadingPageSize, setUtilityReadingPageSize] = useState(10);
   const [utilityReadingLoading, setUtilityReadingLoading] = useState(false);
   const [utilityReadingSorts, setUtilityReadingSorts] = useState<SortQuery[]>([]);
+  const [billingCycles, setBillingCycles] = useState<string[]>([]);
   const utilityReadingsLastRequestKeyRef = useRef<string>("");
   const fetchedApartmentIdRef = useRef<string | null>(null);
   const utilityReadingsAbortRef = useRef<AbortController | null>(null);
@@ -297,6 +299,23 @@ const ApartmentDetail: React.FC = () => {
       });
     }
   }, [apartmentData, apartmentForm]);
+
+  useEffect(() => {
+    const cycles: string[] = [];
+    const currentDate = dayjs();
+    
+    for (let i = 12; i >= 1; i--) {
+      const date = currentDate.subtract(i, "month");
+      cycles.push(date.format("MM/YYYY"));
+    }
+    
+    cycles.push(currentDate.format("MM/YYYY"));
+    
+    const nextMonth = currentDate.add(1, "month");
+    cycles.push(nextMonth.format("MM/YYYY"));
+    
+    setBillingCycles(cycles);
+  }, []);
 
   const fetchFeeTypes = useCallback(async () => {
     try {
@@ -1057,6 +1076,11 @@ const ApartmentDetail: React.FC = () => {
               label: "Residents",
               children: apartmentId ? <ResidentsTab apartmentId={apartmentId} /> : null,
             },
+            {
+              key: "4",
+              label: "Parking",
+              children: apartmentId ? <ParkingTab apartmentId={apartmentId} /> : null,
+            },
           ]}
         />
       </Card>
@@ -1106,12 +1130,11 @@ const ApartmentDetail: React.FC = () => {
                 rules={[{ required: true, message: "Required" }]}
               >
                 <Select style={{ width: "100%" }} placeholder="Select cycle">
-                  <Option value="11/2025">11/2025</Option>
-                  <Option value="10/2025">10/2025</Option>
-                  <Option value="09/2025">09/2025</Option>
-                  <Option value="08/2025">08/2025</Option>
-                  <Option value="07/2025">07/2025</Option>
-                  <Option value="06/2025">06/2025</Option>
+                  {billingCycles.map((cycle) => (
+                    <Option key={cycle} value={cycle}>
+                      {cycle}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

@@ -25,6 +25,7 @@ import NotFound404 from "./pages/Error/NotFound404";
 import AuthGuard from "./components/AuthGuard";
 import ApartmentBuildingGuard from "./components/ApartmentBuildingGuard";
 import PermissionGuard from "./components/PermissionGuard";
+import FeeNotice from "./pages/FeeNotice/FeeNotice";
 
 export default function AppRoutes() {
   return (
@@ -242,6 +243,15 @@ export default function AppRoutes() {
           <ApartmentBuildingGuard>
             <PermissionGuard permission="Permissions.RolePermissions">
               <RoleForm />
+            </PermissionGuard>
+          </ApartmentBuildingGuard>
+        </AuthGuard>
+      } />
+      <Route path="/:apartmentBuildingId/fee-notice" element={
+        <AuthGuard>
+          <ApartmentBuildingGuard>
+            <PermissionGuard permission="Permissions.FeeNoticePermissions">
+              <FeeNotice />
             </PermissionGuard>
           </ApartmentBuildingGuard>
         </AuthGuard>

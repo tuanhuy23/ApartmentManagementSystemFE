@@ -1,7 +1,9 @@
 export interface ParkingRegistrationDto {
-  id: string;
+  id: string | null;
   apartmentId: string;
   apartmentBuildingId: string;
   vehicleType: string;
+  vehicleDescription: string;
+  vehicleNumber: string;
 }
 

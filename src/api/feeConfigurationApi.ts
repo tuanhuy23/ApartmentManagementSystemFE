@@ -42,6 +42,16 @@ export const feeConfigurationApi = {
     return axiosClient.get(url, { headers });
   },
 
+  getResidentFeeConfigurations: (): Promise<ApiResponse<FeeTypeDto[]>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    } 
+    const url = `/${appartmentBuildingId}/fee-configuration/resident`;
+    
+    return axiosClient.get(url);
+  },
+
   getById: (id: string): Promise<ApiResponse<FeeTypeDto>> => {
     const appartmentBuildingId = getAppartmentBuildingId();
     if (!appartmentBuildingId) {

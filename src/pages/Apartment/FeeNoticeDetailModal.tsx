@@ -124,28 +124,37 @@ const FeeNoticeDetailModal: React.FC<FeeNoticeDetailModalProps> = ({
       >
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <Descriptions column={2} size="small">
-            <Descriptions.Item label="Consumption">
-              {detail.consumption !== null ? detail.consumption.toFixed(2) : "N/A"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Proration">
-              {detail.proration !== null ? `${(detail.proration * 100).toFixed(2)}%` : "N/A"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Previous Reading">
-              <div>
-                <div>{detail.previousReading !== null ? detail.previousReading.toFixed(2) : "N/A"}</div>
-                <Text type="secondary" style={{ fontSize: "12px" }}>
-                  {formatDate(detail.previousReadingDate)}
-                </Text>
-              </div>
-            </Descriptions.Item>
-            <Descriptions.Item label="Current Reading">
-              <div>
-                <div>{detail.currentReading !== null ? detail.currentReading.toFixed(2) : "N/A"}</div>
-                <Text type="secondary" style={{ fontSize: "12px" }}>
-                  {formatDate(detail.currentReadingDate)}
-                </Text>
-              </div>
-            </Descriptions.Item>
+            {detail.consumption !== null && (
+              <Descriptions.Item label="Consumption">
+                {detail.consumption.toFixed(2)}
+              </Descriptions.Item>
+            )}
+
+            {detail.proration !== null && (
+              <Descriptions.Item label="Proration">
+                {`${(detail.proration * 100).toFixed(2)}%`}
+              </Descriptions.Item>
+            )}
+            {detail.previousReading !== null && (
+              <Descriptions.Item label="Previous Reading">
+                <div>
+                  <div>{detail.previousReading !== null ? detail.previousReading.toFixed(2) : "N/A"}</div>
+                  <Text type="secondary" style={{ fontSize: "12px" }}>
+                    {formatDate(detail.previousReadingDate)}
+                  </Text>
+                </div>
+              </Descriptions.Item>
+            )}
+            {detail.currentReading !== null && (
+              <Descriptions.Item label="Current Reading">
+                <div>
+                  <div>{detail.currentReading !== null ? detail.currentReading.toFixed(2) : "N/A"}</div>
+                  <Text type="secondary" style={{ fontSize: "12px" }}>
+                    {formatDate(detail.currentReadingDate)}
+                  </Text>
+                </div>
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="Gross Cost">
               {formatCurrency(detail.grossCost)}
             </Descriptions.Item>

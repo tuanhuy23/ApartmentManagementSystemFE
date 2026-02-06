@@ -1,15 +1,10 @@
 import React, { useState } from "react";
-import { Layout, Button, Dropdown, Badge, Avatar, Space, Drawer, List, Typography, Tag } from "antd";
+import { Layout, Button, Dropdown, Avatar, Space, Typography } from "antd";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  BellOutlined,
   UserOutlined,
   LogoutOutlined,
-  CloseOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  InfoCircleOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { useNavigate } from "react-router-dom";

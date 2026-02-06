@@ -12,7 +12,6 @@ import { accountApi } from "../../api/accountApi";
 import { tokenStorage } from "../../utils/storage";
 import { useAuth } from "../../hooks/useAuth";
 
-const { Text } = Typography;
 
 const { Header: AntHeader } = Layout;
 
@@ -22,7 +21,6 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
-  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 

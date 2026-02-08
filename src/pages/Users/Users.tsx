@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Table, Typography, Button, App, Breadcrumb, Input, Modal, Space } from "antd";
-import { PlusOutlined, UserOutlined, EditOutlined, HomeOutlined, SearchOutlined, DeleteOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, UserOutlined, EditOutlined, HomeOutlined, SearchOutlined, DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { userApi } from "../../api/userApi";
 import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
@@ -9,6 +9,7 @@ import type { UserDto } from "../../types/user";
 import type { FilterQuery, SortQuery } from "../../types/apiResponse";
 import { FilterOperator, SortDirection } from "../../types/apiResponse";
 import type { ColumnType } from "antd/es/table";
+import { useAuth } from "../../hooks/useAuth";
 
 const { Title } = Typography;
 
@@ -21,12 +22,20 @@ const Users: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [sorts, setSorts] = useState<SortQuery[]>([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  
   const [selectedUser, setSelectedUser] = useState<UserDto | null>(null);
   const [deleting, setDeleting] = useState(false);
+
   const navigate = useNavigate();
   const apartmentBuildingId = useApartmentBuildingId();
   const hasFetchedUsersRef = useRef(false);
   const lastRequestKeyRef = useRef<string>("");
+
+  const [resetModalVisible, setResethModalVisible] = useState(false);
+  const [resetting, setResseting] = useState(false);
+
+  const { user } = useAuth();
+
 
   const fetchUsers = async () => {
     const requestKey = JSON.stringify({ searchTerm, sorts, currentPage, pageSize });
@@ -85,6 +94,11 @@ const Users: React.FC = () => {
     setDeleteModalVisible(true);
   };
 
+  const handleResetUser = (user: UserDto) => {
+    setSelectedUser(user);
+    setResethModalVisible(true);
+  };
+
   const handleDeleteConfirm = async () => {
     if (!selectedUser || !selectedUser.userId) return;
 
@@ -119,6 +133,30 @@ const Users: React.FC = () => {
       notification.error({ message: errorMessage });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleResetConfirm = async () => {
+    if (!selectedUser || !selectedUser.userId) return;
+
+    try {
+      setResseting(true);
+      const response = await userApi.refresh(selectedUser.userId);
+      
+      if (response.status == 200) {
+        notification.success({
+          message: "Success",
+          description: `User "${selectedUser.displayName}" has been reseted successfully.`,
+        });
+        setResethModalVisible(false);
+        setSelectedUser(null);
+        lastRequestKeyRef.current = "";
+      }
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to refresh user");
+      notification.error({ message: errorMessage });
+    } finally {
+      setResseting(false);
     }
   };
 
@@ -186,9 +224,17 @@ const Users: React.FC = () => {
             style={{ color: "#000", cursor: "pointer", fontSize: 16 }}
             onClick={() => handleEdit(record.userId!)}
           />
-          <DeleteOutlined
+          {user?.roleName != "SupperAdmin" && (
+            <DeleteOutlined
             style={{ color: "#000", cursor: "pointer", fontSize: 16 }}
             onClick={() => handleDelete(record)}
+          />
+          )}
+          <ReloadOutlined   
+            style={{ color: "#000", cursor: "pointer", fontSize: 16 }}
+            onClick={() => {
+              handleResetUser(record);
+          }}
           />
         </Space>
       ),
@@ -345,6 +391,47 @@ const Users: React.FC = () => {
               <li>This user will be permanently deleted</li>
               <li>All data associated with this user will be lost</li>
               <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: "#ff4d4f", marginRight: 8 }} />
+            Reset User
+          </span>
+        }
+        open={resetModalVisible}
+        onOk={handleResetConfirm}
+        onCancel={() => {
+          setResethModalVisible(false);
+          setSelectedUser(null);
+        }}
+        okText="Refresh"
+        okType="danger"
+        cancelText="Cancel"
+        confirmLoading={resetting}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to reset user <strong>{selectedUser?.displayName}</strong>?
+          </p>
+          <div style={{ 
+            background: '#fff7e6', 
+            border: '1px solid #ffd591', 
+            borderRadius: 4, 
+            padding: 12,
+            marginTop: 16 
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>This user will be permanently reseted</li>
             </ul>
           </div>
         </div>

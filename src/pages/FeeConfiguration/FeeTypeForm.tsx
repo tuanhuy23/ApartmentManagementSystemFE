@@ -66,22 +66,53 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
   };
 
   const getCurrentFeeType = (): FeeType => {
-    if (feeType) return feeType;
-    
     const formValues = form.getFieldsValue();
+    
+    // If tempFeeType exists, merge it with feeType (if exists) and form values
+    if (tempFeeType) {
+      const baseFeeType = feeType || tempFeeType;
+      return {
+        ...baseFeeType,
+        feeName: formValues.feeName || tempFeeType.feeName || baseFeeType.feeName || "",
+        calculationType: calculationType || tempFeeType.calculationType || baseFeeType.calculationType,
+        defaultRate: formValues.defaultRate ?? tempFeeType.defaultRate ?? baseFeeType.defaultRate,
+        vatRate: formValues.vatRate ?? tempFeeType.vatRate ?? baseFeeType.vatRate ?? 0,
+        applyDate: formValues.applyDate && dayjs.isDayjs(formValues.applyDate)
+          ? formValues.applyDate.toISOString()
+          : tempFeeType.applyDate || baseFeeType.applyDate,
+        quantityRates: tempFeeType.quantityRates || baseFeeType.quantityRates || [],
+        rateConfigs: tempFeeType.rateConfigs || baseFeeType.rateConfigs || [],
+      };
+    }
+    
+    // If feeType exists, merge with form values
+    if (feeType) {
+      return {
+        ...feeType,
+        feeName: formValues.feeName || feeType.feeName || "",
+        calculationType: calculationType || feeType.calculationType,
+        defaultRate: formValues.defaultRate ?? feeType.defaultRate,
+        vatRate: formValues.vatRate ?? feeType.vatRate ?? 0,
+        applyDate: formValues.applyDate && dayjs.isDayjs(formValues.applyDate)
+          ? formValues.applyDate.toISOString()
+          : feeType.applyDate,
+      };
+    }
+    
+    // New fee type - use form values
     return {
       id: "",
       feeName: formValues.feeName || "",
       calculationType: calculationType,
-      buildingId: tempFeeType?.buildingId || "",
+      buildingId: "",
       buildingName: buildingName,
       defaultRate: formValues.defaultRate,
       vatRate: formValues.vatRate ?? 0,
       applyDate: formValues.applyDate && dayjs.isDayjs(formValues.applyDate) 
         ? formValues.applyDate.toISOString() 
         : null,
-      quantityRates: tempFeeType?.quantityRates || [],
-      rateConfigs: tempFeeType?.rateConfigs || [],
+      quantityRates: [],
+      rateConfigs: [],
     };
   };
 
@@ -108,8 +139,10 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
   };
 
   const handleQuantityRatesSave = (quantityRates: FeeType["quantityRates"]) => {
-    const currentFeeType = getCurrentFeeType();
-    const updatedFeeType = { ...currentFeeType, quantityRates };
+    // If tempFeeType exists, merge with it to preserve all previous updates
+    // Otherwise, get current fee type from form
+    const baseFeeType = tempFeeType || getCurrentFeeType();
+    const updatedFeeType = { ...baseFeeType, quantityRates };
     setTempFeeType(updatedFeeType);
     setIsQuantityModalOpen(false);
   };
@@ -265,13 +298,19 @@ const FeeTypeForm: React.FC<FeeTypeFormProps> = ({
                       notification.warning({ message: "Please enter fee name first" });
                       return;
                     }
+                    // Merge form values into tempFeeType while preserving quantityRates and rateConfigs
                     const currentFeeType = getCurrentFeeType();
                     if (currentFeeType && currentFeeType.feeName) {
-                      setTempFeeType(currentFeeType);
-                      setTimeout(() => {
-                        setIsQuantityModalOpen(true);
-                      }, 0);
+                      // Preserve quantityRates and rateConfigs from tempFeeType if they exist
+                      setTempFeeType({
+                        ...currentFeeType,
+                        quantityRates: tempFeeType?.quantityRates || currentFeeType.quantityRates || [],
+                        rateConfigs: tempFeeType?.rateConfigs || currentFeeType.rateConfigs || [],
+                      });
                     }
+                    setTimeout(() => {
+                      setIsQuantityModalOpen(true);
+                    }, 0);
                   } catch (error) {
                     notification.error({ message: "Failed to open quantity rate configuration" });
                   }

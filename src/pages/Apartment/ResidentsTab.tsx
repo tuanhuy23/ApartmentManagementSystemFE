@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Table, Button, Space, Tag, Modal, Drawer, Form, Input, DatePicker, Select, App, Typography } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined, SearchOutlined, ReloadOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined, SearchOutlined, ReloadOutlined, ExclamationCircleOutlined, } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import { apartmentApi } from "../../api/apartmentApi";
+import { apartmentApi, } from "../../api/apartmentApi";
+import { userApi } from "../../api/userApi";
 import { getErrorMessage } from "../../utils/errorHandler";
 import type { ResidentDto } from "../../types/resident";
 import { getApartmentBuildingIdFromToken } from "../../utils/token";
@@ -38,6 +39,9 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
   const hasFetchedResidentsRef = useRef(false);
   const lastRequestKeyRef = useRef<string>("");
   const memberType = Form.useWatch("memberType", form) || "MEMBER";
+
+  const [resetModalVisible, setResethModalVisible] = useState(false);
+  const [resetting, setResseting] = useState(false);
 
   const fetchResidents = async () => {
     if (!apartmentId) return;
@@ -149,6 +153,36 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
   const handleDeleteClick = (resident: ResidentDto) => {
     setSelectedResidentForDelete(resident);
     setDeleteModalVisible(true);
+  };
+
+  const handleResetUser = (user: ResidentDto) => {
+    setSelectedResident(user);
+    setResethModalVisible(true);
+  };
+
+  const handleResetConfirm = async () => {
+    if (!selectedResident || !selectedResident.userId) return;
+
+    try {
+      setResseting(true);
+      const response = await userApi.refresh(selectedResident.userId);
+      
+      if (response.status == 200) {
+        notification.success({
+          message: "Success",
+          description: `Resident "${selectedResident.name}" has been reseted successfully.`,
+        });
+        setResethModalVisible(false);
+        setSelectedResident(null);
+        lastRequestKeyRef.current = "";
+      }
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to refresh user");
+      notification.error({ message: errorMessage });
+    } finally {
+      setResseting(false);
+      setIsModalVisible(false);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -418,9 +452,14 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
             >
               Cancel
             </Button>
-            <Button type="primary" onClick={handleSubmit} loading={submitting}>
+            <Button type="primary" onClick={handleSubmit} loading={submitting}  style={{ marginRight: 8 }}>
               {selectedResident ? "Update" : "Create"}
             </Button>
+            {selectedResident && selectedResident.userId && (
+              <Button type="primary" danger onClick={() => handleResetUser(selectedResident)} loading={resetting}>
+                Reset User
+              </Button>
+            )}
           </div>
         }
       >
@@ -670,6 +709,48 @@ const ResidentsTab: React.FC<ResidentsTabProps> = ({ apartmentId }) => {
               <li>All information related to this resident will be permanently deleted</li>
               <li>If this resident is an owner, their account access will be removed</li>
               <li>This action cannot be undone</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
+
+          
+      <Modal
+        title={
+          <span>
+            <ExclamationCircleOutlined style={{ color: "#ff4d4f", marginRight: 8 }} />
+            Reset User
+          </span>
+        }
+        open={resetModalVisible}
+        onOk={handleResetConfirm}
+        onCancel={() => {
+          setResethModalVisible(false);
+          setSelectedResident(null);
+        }}
+        okText="Reset"
+        okType="danger"
+        cancelText="Cancel"
+        confirmLoading={resetting}
+        width={600}
+      >
+        <div style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 12 }}>
+            Are you sure you want to reset user <strong>{selectedResident?.name}</strong>?
+          </p>
+          <div style={{ 
+            background: '#fff7e6', 
+            border: '1px solid #ffd591', 
+            borderRadius: 4, 
+            padding: 12,
+            marginTop: 16 
+          }}>
+            <p style={{ margin: 0, color: '#d46b08', fontWeight: 500 }}>
+              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
+              Important Warning:
+            </p>
+            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+              <li>This user will be permanently reseted</li>
             </ul>
           </div>
         </div>

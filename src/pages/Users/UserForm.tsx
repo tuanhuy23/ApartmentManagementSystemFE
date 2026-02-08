@@ -8,6 +8,7 @@ import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
 import { getErrorMessage } from "../../utils/errorHandler";
 import type { CreateOrUpdateUserRequestDto } from "../../types/user";
 import type { RoleDto } from "../../types/role";
+import { useAuth } from "../../hooks/useAuth";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -25,6 +26,8 @@ const UserForm: React.FC = () => {
   const [userRoleId, setUserRoleId] = useState<string>("");
   const hasFetchedRolesRef = useRef(false);
   const hasFetchedUserRef = useRef(false);
+
+  const { user } = useAuth();
   
   const isEditMode = !!userId;
 
@@ -43,6 +46,7 @@ const UserForm: React.FC = () => {
   }, [isEditMode, userId]);
 
   const fetchRoles = async () => {
+    if (user?.roleName === "SupperAdmin") return;
     try {
       setFetchingRoles(true);
       const response = await roleApi.getAll();
@@ -125,7 +129,7 @@ const UserForm: React.FC = () => {
         userId: isEditMode && userId ? userId : "",
         displayName: values.displayName,
         email: values.email,
-        roleId: values.roleId,
+        roleId: user?.roleName != "SupperAdmin" ? values.roleId : userRoleId,
         userName: values.userName,
         phoneNumber: values.phoneNumber || "",
         appartmentBuildingId: apartmentBuildingId || "",
@@ -230,7 +234,7 @@ const UserForm: React.FC = () => {
               <Input placeholder="Enter phone number" />
             </Form.Item>
 
-            <Form.Item
+            {user?.roleName != "SupperAdmin" && (<Form.Item
               label="Role"
               name="roleId"
               rules={[{ required: true, message: "Please select a role!" }]}
@@ -250,7 +254,7 @@ const UserForm: React.FC = () => {
                   </Option>
                 ))}
               </Select>
-            </Form.Item>
+            </Form.Item>)}
 
             {!isEditMode && (
               <Form.Item

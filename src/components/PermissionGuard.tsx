@@ -5,9 +5,10 @@ import { useAuth } from "../hooks/useAuth";
 interface PermissionGuardProps {
   children: React.ReactNode;
   permission: string | null;
+  action: "Read" | "ReadWrite" | "ReadRetrict";
 }
 
-const PermissionGuard: React.FC<PermissionGuardProps> = ({ children, permission }) => {
+const PermissionGuard: React.FC<PermissionGuardProps> = ({ children, permission, action }) => {
   const { user } = useAuth();
 
   if (permission === null) {
@@ -19,9 +20,7 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({ children, permission 
   }
 
   const hasPermission = 
-    user.permissions.includes(`${permission}.Read`) || 
-    user.permissions.includes(`${permission}.ReadWrite`)
-    || user.permissions.includes(`${permission}.ReadRetrict`);
+    user.permissions.includes(`${permission}.${action}`);
 
   if (!hasPermission) {
     return <Navigate to="/403" replace />;

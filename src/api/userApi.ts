@@ -70,4 +70,11 @@ export const userApi = {
     }
     return axiosClient.delete(`/${appartmentBuildingId}/user`, { data: userIds });
   },
+  refresh: (userId: string): Promise<ApiResponse<ApiResponse<void>>> => {
+    const appartmentBuildingId = getAppartmentBuildingId();
+    if (!appartmentBuildingId) {
+      return Promise.reject(new Error("AppartmentBuildingId is required"));
+    }
+    return axiosClient.put(`/${appartmentBuildingId}/user/refresh/${userId}`);
+  },
 };

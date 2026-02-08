@@ -52,7 +52,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/users" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.UserPermissions">
+            <PermissionGuard permission="Permissions.UserPermissions" action="Read">
               <Users />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -61,7 +61,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/users/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.UserPermissions">
+            <PermissionGuard permission="Permissions.UserPermissions" action="ReadWrite">
               <UserForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -70,7 +70,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/users/edit/:userId" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.UserPermissions">
+            <PermissionGuard permission="Permissions.UserPermissions" action="ReadWrite">
               <UserForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -79,7 +79,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/apartment-buildings" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.ApartmentBuildingPermissions">
+            <PermissionGuard permission="Permissions.ApartmentBuildingPermissions" action="Read">
               <ApartmentBuildings />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -88,7 +88,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/apartment-buildings/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.ApartmentBuildingPermissions">
+            <PermissionGuard permission="Permissions.ApartmentBuildingPermissions" action="ReadWrite">
               <ApartmentBuildingForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -97,7 +97,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/apartment-buildings/edit/:id" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.ApartmentBuildingPermissions">
+            <PermissionGuard permission="Permissions.ApartmentBuildingPermissions" action="ReadWrite">
               <ApartmentBuildingForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -106,7 +106,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/apartments" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.ApartmentPermissions">
+            <PermissionGuard permission="Permissions.ApartmentPermissions" action="Read">
               <Apartments />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -115,7 +115,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/apartments/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.ApartmentPermissions">
+            <PermissionGuard permission="Permissions.ApartmentPermissions" action="ReadWrite">
               <ApartmentForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -124,7 +124,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/apartments/:apartmentId" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.ApartmentPermissions">
+            <PermissionGuard permission="Permissions.ApartmentPermissions" action="ReadWrite">
               <ApartmentDetail />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -133,7 +133,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/import-fee-notice-result" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.ApartmentPermissions">
+            <PermissionGuard permission="Permissions.ApartmentPermissions" action="ReadWrite">
               <ImportFeeNoticeResultPage />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -142,7 +142,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/fee-configuration" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.FeeConfigurationPermissions">
+            <PermissionGuard permission="Permissions.FeeConfigurationPermissions" action="Read">
               <FeeConfiguration />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -151,7 +151,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/billing-cycle" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.FeeConfigurationPermissions">
+            <PermissionGuard permission="Permissions.FeeConfigurationPermissions" action="ReadWrite">
               <BillingCycleSetting />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -160,7 +160,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/announcements" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.NotificationPermissions">
+            <PermissionGuard permission="Permissions.NotificationPermissions" action="Read">
               <Announcements />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -169,7 +169,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/announcements/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.NotificationPermissions">
+            <PermissionGuard permission="Permissions.NotificationPermissions" action="ReadWrite">
               <AnnouncementForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -178,7 +178,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/announcements/edit/:id" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.NotificationPermissions">
+            <PermissionGuard permission="Permissions.NotificationPermissions" action="ReadWrite">
               <AnnouncementForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -187,7 +187,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/requests" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.RequestPermissions">
+            <PermissionGuard permission="Permissions.RequestPermissions" action="Read">
               <Requests />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -196,7 +196,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/requests/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.RequestPermissions">
+            <PermissionGuard permission="Permissions.RequestPermissions" action="ReadWrite">
               <RequestForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -205,7 +205,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/requests/edit/:id" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.RequestPermissions">
+            <PermissionGuard permission="Permissions.RequestPermissions" action="ReadWrite">
               <RequestForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -214,7 +214,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/requests/:id" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.RequestPermissions">
+            <PermissionGuard permission="Permissions.RequestPermissions" action="ReadWrite">
               <RequestDetail />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -223,7 +223,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/roles" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.RolePermissions">
+            <PermissionGuard permission="Permissions.RolePermissions" action="Read">
               <Roles />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -232,7 +232,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/roles/create" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.RolePermissions">
+            <PermissionGuard permission="Permissions.RolePermissions" action="ReadWrite">
               <RoleForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -241,7 +241,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/roles/edit/:roleId" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.RolePermissions">
+            <PermissionGuard permission="Permissions.RolePermissions" action="ReadWrite">
               <RoleForm />
             </PermissionGuard>
           </ApartmentBuildingGuard>
@@ -250,7 +250,7 @@ export default function AppRoutes() {
       <Route path="/:apartmentBuildingId/fee-notice" element={
         <AuthGuard>
           <ApartmentBuildingGuard>
-            <PermissionGuard permission="Permissions.FeeNoticePermissions">
+            <PermissionGuard permission="Permissions.FeeNoticePermissions" action="ReadRetrict">
               <FeeNotice />
             </PermissionGuard>
           </ApartmentBuildingGuard>

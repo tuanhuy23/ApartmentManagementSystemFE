@@ -1,7 +1,6 @@
 import React from "react";
 import { Layout, Menu } from "antd";
 import {
-  HomeOutlined,
   UserOutlined,
   BuildOutlined,
   DollarOutlined,
@@ -38,85 +37,81 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
     return `/${apartmentBuildingId}${path}`;
   };
 
-  const hasPermission = (permissionName: string): boolean => {
+  const hasPermission = (permissionName: string, action: string): boolean => {
     if (!user?.permissions || user.permissions.length === 0) {
       return false;
     }
-    if (user.permissions.includes(`${permissionName}.ReadRetrict`)){
-      return true;
-    } else
-    {
-      return user.permissions.includes(`${permissionName}.Read`) || 
-      user.permissions.includes(`${permissionName}.ReadWrite`);
-    }
-    
+    return user.permissions.includes(`${permissionName}.${action}`)
   };
 
   const allMenuItems = [
-    {
-      key: "/",
-      icon: <HomeOutlined />,
-      label: "Dashboard",
-      permission: null,
-    },
     {
       key: getPathWithApartmentId("/users"),
       icon: <UserOutlined />,
       label: "Users",
       permission: "Permissions.UserPermissions",
+      action: "Read",
     },
     {
       key: getPathWithApartmentId("/roles"),
       icon: <SafetyOutlined />,
       label: "Roles",
       permission: "Permissions.RolePermissions",
+      action: "Read",
     },
     {
       key: getPathWithApartmentId("/apartment-buildings"),
       icon: <BuildOutlined />,
       label: "Apartment Buildings",
       permission: "Permissions.ApartmentBuildingPermissions",
+      action: "Read",
     },
     {
       key: getPathWithApartmentId("/apartments"),
       icon: <ApartmentOutlined />,
       label: "Apartments",
       permission: "Permissions.ApartmentPermissions",
+      action: "Read",
     },
     {
       key: getPathWithApartmentId("/fee-configuration"),
       icon: <DollarOutlined />,
       label: "Fee Configuration",
       permission: "Permissions.FeeConfigurationPermissions",
+      action: "Read",
     },
     {
       key: getPathWithApartmentId("/billing-cycle"),
       icon: <CalendarOutlined />,
       label: "Billing Cycle",
       permission: "Permissions.FeeConfigurationPermissions",
+      action: "Read",
     },
     {
       key: getPathWithApartmentId("/fee-notice"),
       icon: <TransactionOutlined />,
       label: "Fee Notice",
       permission: "Permissions.FeeNoticePermissions",
+      action: "ReadRetrict",
     },
     {
       key: getPathWithApartmentId("/announcements"),
       icon: <NotificationOutlined />,
       label: "Announcements",
       permission: "Permissions.NotificationPermissions",
+      action: "Read",
     },
     {
       key: getPathWithApartmentId("/requests"),
       icon: <QuestionCircleOutlined />,
       label: "Requests",
       permission: "Permissions.RequestPermissions",
+      action: "Read",
     },
   ];
 
   const menuItems = allMenuItems
-    .filter(item => item.permission === null || hasPermission(item.permission))
+    .filter(item => item.permission === null || hasPermission(item.permission, item.action))
     .map(({ permission, ...item }) => item);
 
   const handleMenuClick = ({ key }: { key: string }) => {

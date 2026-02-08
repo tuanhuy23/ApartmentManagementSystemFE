@@ -1,63 +1,104 @@
 import React from "react";
-import { Typography, Card, Row, Col, Statistic } from "antd";
-import { UserOutlined, HomeOutlined, DollarOutlined, FileTextOutlined } from "@ant-design/icons";
 
-const { Title } = Typography;
+
+import { Typography, Card, Row, Col, Button, Divider, Space} from "antd";
+import {  HomeOutlined, ArrowRightOutlined, PlusCircleOutlined, BellOutlined, CustomerServiceOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import { useApartmentBuildingId } from "../../hooks/useApartmentBuildingId";
+import { useAuth } from "../../hooks/useAuth";
+const { Title,  Paragraph, Text  } = Typography;
 
 const Home: React.FC = () => {
+  const navigate = useNavigate();
+  const apartmentBuildingId = useApartmentBuildingId();
+  const { user } = useAuth();
+
   return (
-    <div style={{ padding: 24 }}>
-      <Title level={2}>Dashboard</Title>
+    <div style={{ padding: '40px 24px', maxWidth: '1200px', margin: '0 auto' }}>
       
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Total Users"
-              value={1128}
-              prefix={<UserOutlined />}
-            />
-          </Card>
+      <Row gutter={[32, 32]} align="middle" style={{ marginBottom: 20 }}>
+        <Col xs={24} md={16}>
+          <Typography>
+            <Title level={1} style={{ margin: 0 }}>
+              Welcome back, {user?.displayName || user?.userName || "User"}! 👋
+            </Title>
+            <Paragraph style={{ fontSize: '18px', color: '#595959', marginTop: 12 }}>
+              The Apartment Management System is ready. 
+              What would you like to manage today?
+            </Paragraph>
+          </Typography>
+          
+          <Space size="middle" style={{ marginTop: 8 }}>
+            <Button 
+              type="primary" 
+              size="large" 
+              icon={<PlusCircleOutlined />} 
+              shape="round"
+              style={{ height: '45px', padding: '0 25px' }}
+              onClick={() => navigate(`/${apartmentBuildingId}/apartments/create`)}
+            >
+              Add New Apartment
+            </Button>
+          </Space>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Total Apartments"
-              value={93}
-              prefix={<HomeOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Monthly Revenue"
-              value={112893}
-              prefix={<DollarOutlined />}
-              suffix="VND"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Pending Contracts"
-              value={93}
-              prefix={<FileTextOutlined />}
-            />
-          </Card>
+
+        <Col xs={0} md={8} style={{ textAlign: 'right' }}>
+          <div style={{ 
+            display: 'inline-block',
+            padding: '40px',
+            background: 'linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)',
+            borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%', 
+          }}>
+            <HomeOutlined style={{ fontSize: '100px', color: '#1890ff' }} />
+          </div>
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card title="Recent Activities" style={{ height: 400 }}>
-            <p>Recent activities will be displayed here...</p>
+      <Divider style={{ margin: '40px 0' }} />
+
+
+      <Title level={3} style={{ marginBottom: 24 }}>Quick Access</Title>
+      
+      <Row gutter={[20, 20]}>
+
+        <Col xs={24} sm={8}>
+          <Card hoverable style={{ borderRadius: '12px' }}>
+            <HomeOutlined style={{ fontSize: '32px', color: '#1890ff', marginBottom: 16 }} />
+            <Title level={4}>Apartments</Title>
+            <Text type="secondary">Manage apartment list and status.</Text>
+            <div style={{ marginTop: 20 }}>
+              <Button type="link" icon={<ArrowRightOutlined />} style={{ padding: 0 }}  onClick={() => navigate(`/${apartmentBuildingId}/apartments`)}>
+                Go to page
+              </Button>
+            </div>
           </Card>
         </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Quick Actions" style={{ height: 400 }}>
-            <p>Quick actions will be displayed here...</p>
+
+
+        <Col xs={24} sm={8}>
+          <Card hoverable style={{ borderRadius: '12px' }}>
+            <CustomerServiceOutlined style={{ fontSize: '32px', color: '#52c41a', marginBottom: 16 }} />
+            <Title level={4}>Requests</Title>
+            <Text type="secondary">Manage and process tenant requests.</Text>
+            <div style={{ marginTop: 20 }}>
+              <Button type="link" icon={<ArrowRightOutlined />} style={{ padding: 0 }}  onClick={() => navigate(`/${apartmentBuildingId}/requests`)}>
+                Go to page
+              </Button>
+            </div>
+          </Card>
+        </Col>
+
+
+        <Col xs={24} sm={8}>
+          <Card hoverable style={{ borderRadius: '12px' }}>
+            <BellOutlined style={{ fontSize: '32px', color: '#faad14', marginBottom: 16 }} />
+            <Title level={4}>Notifications</Title>
+            <Text type="secondary">Manage system and tenant notices.</Text>
+            <div style={{ marginTop: 20 }}>
+              <Button type="link" icon={<ArrowRightOutlined />} style={{ padding: 0 }}  onClick={() => navigate(`/${apartmentBuildingId}/announcements`)}>
+                Go to page
+              </Button>
+            </div>
           </Card>
         </Col>
       </Row>

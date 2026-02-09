@@ -610,6 +610,9 @@ const ApartmentDetail: React.FC = () => {
     setIsModalVisible(true);
     form.resetFields();
     setSelectedFees([]);
+
+    utilityReadingsLastRequestKeyRef.current = "";
+    await fetchUtilityReadings();
   };
 
   const handleSaveDraft = async () => {
